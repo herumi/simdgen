@@ -40,37 +40,37 @@ extern "C" {
 #define SG_OP_EXP 5
 #define SG_OP_LOG 6
 
-#define SG_PARA_MAX_NUM 4
 typedef struct {
-	int argN;
-	int tmpN;
-	int tblN;
-	int opt[SG_PARAM_MAX_NUM];
-	uint32_t n;
-} sgPara;
+	int unrollN;
+} SgPara;
 
-typedef struct sgCode sgCode;
+typedef struct SgCode SgCode;
+
+#define SG_FUNC_SRC_MAX_NUM 5
+typedef struct {
+	void *dst;
+	const void *src[SG_FUNC_SRC_MAX_NUM];
+	uint32_t srcN;
+} FuncArg;
+
+typedef void (*sgFuncType)(const FuncArg *arg, uint32_t n);
 
 /*
-	create sgCode handler
+	create SgCode handler
 */
-SG_DLL_API int sgCreate(sgCode **code);
+SG_DLL_API int SgCreate(SgCode **code);
 /*
-	destroy sgCode handler
+	destroy SgCode handler
 */
-SG_DLL_API void sgDestroy(sgCode *code);
+SG_DLL_API void SgDestroy(SgCode *code);
 /*
-	append op to code
-	dst = op(op1, op2, op3)
-	dst, op1, op2, op3 are index of register
-	if op1, op2, op3 are -1 and/or para == NULL then these are not used.
+	parse src
 */
-SG_DLL_API int sgAppend(sgCode *code, int op, int dst, int op1, int op2, int op3, const sgPara *para);
-SG_DLL_API int sgGet(void *const *addr, uint32_t *size, sgCode *code);
+SG_DLL_API void SgParse(SgCode *code, FuncArg *arg, const char *src, const SgPara *para);
 /*
 	finish code generator and get address and size of code
 */
-SG_DLL_API int sgGet(void *const *addr, uint32_t *size, sgCode *code);
+SG_DLL_API int SgGet(void *const *addr, uint32_t *size, SgCode *code);
 
 #ifdef __cplusplus
 }
