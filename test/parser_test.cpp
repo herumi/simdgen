@@ -28,11 +28,11 @@ CYBOZU_TEST_AUTO(parseFloat)
 		const char *begin = tbl[i].src;
 		const char *end = begin + strlen(begin);
 		float f;
-		const char *next = sp::parseFloat(&f, begin, end);
+		const char *next = sg::parseFloat(&f, begin, end);
 		bool ok = next == end;
 		CYBOZU_TEST_EQUAL(ok, tbl[i].ok);
 		if (ok) {
-			CYBOZU_TEST_EQUAL(sp::f2u(f), sp::f2u(tbl[i].v));
+			CYBOZU_TEST_EQUAL(sg::f2u(f), sg::f2u(tbl[i].v));
 		}
 	}
 }
@@ -56,12 +56,20 @@ CYBOZU_TEST_AUTO(parseVar)
 		const char *begin = tbl[i].src;
 		const char *end = begin + strlen(begin);
 		std::string v;
-		const char *next = sp::parseVar(v, begin, end);
+		const char *next = sg::parseVar(v, begin, end);
 		bool ok = next == end;
 		CYBOZU_TEST_EQUAL(ok, tbl[i].ok);
 		if (ok) {
 			CYBOZU_TEST_EQUAL(v, tbl[i].v);
 		}
 	}
+}
+
+CYBOZU_TEST_AUTO(parse)
+{
+	sg::Ast ast;
+	sg::Parser parser;
+	parser.parse(ast, "x + 1/(2 + x)");
+	ast.put();
 }
 

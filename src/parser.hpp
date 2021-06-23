@@ -9,13 +9,12 @@
 #include <string>
 #include <vector>
 #include <memory>
-#include <unordered_map>
 #include <stack>
 #include <cybozu/exception.hpp>
 
-namespace sp {
+namespace sg {
 
-enum NodeType {
+enum ValueType {
 	Float,
 	Var,
 	Op,
@@ -32,7 +31,7 @@ enum OpType {
 struct Node;
 
 typedef std::vector<std::unique_ptr<Node>> NodeVec;
-typedef std::unordered_map<std::string, uint32_t> VarIdxTbl;
+typedef std::vector<std::string> StrVec;
 
 inline float u2f(uint32_t u)
 {
@@ -49,8 +48,39 @@ inline uint32_t f2u(float f)
 }
 
 struct Value {
-	NodeType type;
+	ValueType type;
 	uint32_t v;
+	std::string getStr() const
+	{
+		char buf[32];
+		switch (type) {
+		case Float:
+			snprintf(buf, sizeof(buf), "float{%f}", u2f(v));
+			break;
+		case Var:
+			snprintf(buf, sizeof(buf), "var{%d}", v);
+			break;
+		case Op:
+			{
+				const char *tbl[] = {
+					"add",
+					"sub",
+					"mul",
+					"div",
+					"abs",
+				};
+				if (v >= CYBOZU_NUM_OF_ARRAY(tbl)) {
+					throw cybozu::Exception("bad Op") << v;
+				}
+				return tbl[v];
+			}
+		}
+		return buf;
+	}
+	void put() const
+	{
+		printf("%s\n", getStr().c_str());
+	}
 };
 
 struct Node {
@@ -62,8 +92,58 @@ typedef std::vector<Value> ValueVec;
 
 struct Ast {
 	std::unique_ptr<Node> root;
-	VarIdxTbl varIdxTbl;
+	StrVec varIdx;
 	ValueVec vv;
+	void appendFloat(float f)
+	{
+printf("appendFloat %f\n", f);
+		Value v;
+		v.type = Float;
+		v.v = f2u(f);
+		vv.push_back(v);
+	}
+	void appendOp(int kind)
+	{
+printf("appendOp %d\n", kind);
+		Value v;
+		v.type = Op;
+		v.v = kind;
+		vv.push_back(v);
+	}
+	void appendVar(int idx)
+	{
+printf("appendVar %d\n", idx);
+		Value v;
+		v.type = Var;
+		v.v = idx;
+		vv.push_back(v);
+	}
+	uint32_t setVarAndGetIdx(const std::string& s)
+	{
+		const uint32_t n = varIdx.size();
+		for (uint32_t i = 0; i < n; i++) {
+			if (varIdx[i] == s) return i;
+		}
+		varIdx.push_back(s);
+		return n;
+	}
+	void putVarIdx() const
+	{
+		for (size_t i = 0; i < varIdx.size(); i++) {
+			printf("%s:%d\n", varIdx[i].c_str(), (int)i);
+		}
+	}
+	void putValueVec() const
+	{
+		for (size_t i = 0; i < vv.size(); i++) {
+			vv[i].put();
+		}
+	}
+	void put() const
+	{
+		putVarIdx();
+		putValueVec();
+	}
 };
 
 inline bool isSpace(char c) {
@@ -128,74 +208,87 @@ const char* parseVar(std::string& v , const char *begin, const char *end)
 	mulDiv = expr ('*'|'/' expr)
 */
 struct Parser {
-	const char *begin_;
 	const char *end_;
-	void skipSpace()
+	const char *skipSpace(const char *begin)
 	{
-		while (begin_ != end_) {
-			if (!isSpace(*begin_)) break;
-			begin_++;
+		while (begin != end_) {
+			if (!isSpace(*begin)) break;
+			begin++;
 		}
+		return begin;
 	}
-	bool isEnd() const { return begin_ == end_; }
-	void parseTerm(Ast& ast)
+	bool isEnd(const char *begin) const { return begin == end_; }
+	const char *parseTerm(const char *begin, Ast& ast)
 	{
-		skipSpace();
-		if (isEnd()) throw cybozu::Exception("num empty");
-		char c = *begin_;
+		begin = skipSpace(begin);
+		if (isEnd(begin)) throw cybozu::Exception("num empty");
+		char c = *begin;
 		if (c == '(') {
-			parseAddSub(ast);
-			if (!isEnd() && *begin_ == ')') return;
-			throw cybozu::Exception("bad parenthesis") << (isEnd() ? '_' : *begin_);
+			const char *next = parseAddSub(begin + 1, ast);
+			if (!isEnd(next) && *next == ')') return next;
+			throw cybozu::Exception("bad parenthesis") << (isEnd(next) ? '_' : *next);
 		}
 		{
 			float f;
+			const char *next = parseFloat(&f, begin, end_);
+			if (next) {
+				ast.appendFloat(f);
+				return next;
+			}
 		}
+		{
+			std::string str;
+			const char *next = parseVar(str, begin, end_);
+			if (next) {
+				uint32_t idx = ast.setVarAndGetIdx(str);
+				ast.appendVar(idx);
+				return next;
+			}
+		}
+		throw cybozu::Exception("bad syntax") << std::string(begin, end_);
 	}
-	void parseMulDiv(Ast& ast)
+	const char *parseMulDiv(const char *begin, Ast& ast)
 	{
-		parseTerm(ast);
-		while (!isEnd()) {
-			skipSpace();
-			if (isEnd()) return;
-			char c = *begin_;
+		begin = parseTerm(begin, ast);
+		while (!isEnd(begin)) {
+			begin = skipSpace(begin);
+			if (isEnd(begin)) break;
+			char c = *begin;
 			if (c == '*' || c == '/') {
-				begin_++;
-				parseTerm(ast);
-				Value v;
-				v.type = Op;
-				v.v = c == '+' ? Mul : Div;
-				ast.vv.push_back(v);
+				begin = parseTerm(begin + 1, ast);
+				ast.appendOp('+' ? Mul : Div);
+				continue;
 			}
+			break;
 		}
+		return begin;
 	}
-	void parseAddSub(Ast& ast)
+	const char *parseAddSub(const char *begin, Ast& ast)
 	{
-		parseMulDiv(ast);
-		while (!isEnd()) {
-			skipSpace();
-			if (isEnd()) return;
-			char c = *begin_;
+		begin = parseMulDiv(begin, ast);
+		while (!isEnd(begin)) {
+			begin = skipSpace(begin);
+			if (isEnd(begin)) break;
+			char c = *begin;
 			if (c == '+' || c == '-') {
-				begin_++;
-				parseMulDiv(ast);
-				Value v;
-				v.type = Op;
-				v.v = c == '+' ? Add : Sub;
-				ast.vv.push_back(v);
+				begin = parseMulDiv(begin + 1, ast);
+				ast.appendOp('+' ? Add : Sub);
+				continue;
 			}
+			break;
 		}
+		return begin;
 	}
 	void parse(Ast& ast, const std::string& str)
 	{
-		begin_ = str.c_str();
-		end_ = begin_ + str.size();
-		parseAddSub(ast);
-		if (isEnd()) {
-			throw cybozu::Exception("extra string") << std::string(begin_, end_);
+		const char *begin = str.c_str();
+		end_ = begin + str.size();
+		begin = parseAddSub(begin, ast);
+		if (isEnd(begin)) {
+			throw cybozu::Exception("extra string") << std::string(begin, end_);
 		}
 	}
 };
 
-} // sp
+} // sg
 
