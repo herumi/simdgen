@@ -28,10 +28,11 @@ CYBOZU_TEST_AUTO(parseFloat)
 		const char *begin = tbl[i].src;
 		const char *end = begin + strlen(begin);
 		float f;
-		bool ret = sp::parseFloat(&f, begin, end);
-		CYBOZU_TEST_EQUAL(ret, tbl[i].ok);
-		if (ret) {
-			CYBOZU_TEST_EQUAL(f, tbl[i].v);
+		const char *next = sp::parseFloat(&f, begin, end);
+		bool ok = next == end;
+		CYBOZU_TEST_EQUAL(ok, tbl[i].ok);
+		if (ok) {
+			CYBOZU_TEST_EQUAL(sp::f2u(f), sp::f2u(tbl[i].v));
 		}
 	}
 }
@@ -44,19 +45,21 @@ CYBOZU_TEST_AUTO(parseVar)
 		const char *v;
 	} tbl[] = {
 		{ "a", true, "a" },
-		{ "ab+", true, "ab" },
-		{ "abc_EF5z@", true, "abc_EF5z" },
+		{ "abc", true, "abc" },
+		{ "abc_EF5z", true, "abc_EF5z" },
 		{ "-1", false, 0 },
 		{ "0", false, 0 },
 		{ "0123", false, 0 },
+		{ "a+b", false, 0 },
 	};
 	for (size_t i = 0; i < CYBOZU_NUM_OF_ARRAY(tbl); i++) {
 		const char *begin = tbl[i].src;
 		const char *end = begin + strlen(begin);
 		std::string v;
-		bool ret = sp::parseVar(v, begin, end);
-		CYBOZU_TEST_EQUAL(ret, tbl[i].ok);
-		if (ret) {
+		const char *next = sp::parseVar(v, begin, end);
+		bool ok = next == end;
+		CYBOZU_TEST_EQUAL(ok, tbl[i].ok);
+		if (ok) {
 			CYBOZU_TEST_EQUAL(v, tbl[i].v);
 		}
 	}
