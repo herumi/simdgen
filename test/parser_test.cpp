@@ -69,7 +69,8 @@ CYBOZU_TEST_AUTO(parse)
 {
 	sg::Ast ast;
 	sg::Parser parser;
-	parser.parse(ast, "x + 1/(2 + x)");
+	parser.parse(ast, "x + 1/(2 + x / y) + z");
+	ast.makeTree();
 	ast.put();
 }
 

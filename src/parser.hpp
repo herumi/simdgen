@@ -15,6 +15,7 @@
 namespace sg {
 
 enum ValueType {
+	None,
 	Float,
 	Var,
 	Op,
@@ -50,10 +51,17 @@ inline uint32_t f2u(float f)
 struct Value {
 	ValueType type;
 	uint32_t v;
+	Value()
+		: type(None)
+		, v(0)
+	{
+	}
 	std::string getStr() const
 	{
 		char buf[32];
 		switch (type) {
+		case None:
+			return "None";
 		case Float:
 			snprintf(buf, sizeof(buf), "float{%f}", u2f(v));
 			break;
@@ -86,17 +94,26 @@ struct Value {
 struct Node {
 	Value v;
 	NodeVec child;
+	void put() const
+	{
+		printf("%s", v.getStr().c_str());
+		if (child.empty()) return;
+		printf(" [");
+		for (size_t i = 0; i < child.size(); i++) {
+			if (i > 0) printf(",");
+			child[i]->put();
+		}
+		printf("]");
+	}
 };
 
 typedef std::vector<Value> ValueVec;
 
-struct Ast {
-	std::unique_ptr<Node> root;
+struct TokenList {
 	StrVec varIdx;
 	ValueVec vv;
 	void appendFloat(float f)
 	{
-printf("appendFloat %f\n", f);
 		Value v;
 		v.type = Float;
 		v.v = f2u(f);
@@ -104,7 +121,6 @@ printf("appendFloat %f\n", f);
 	}
 	void appendOp(int kind)
 	{
-printf("appendOp %d\n", kind);
 		Value v;
 		v.type = Op;
 		v.v = kind;
@@ -112,7 +128,6 @@ printf("appendOp %d\n", kind);
 	}
 	void appendVar(int idx)
 	{
-printf("appendVar %d\n", idx);
 		Value v;
 		v.type = Var;
 		v.v = idx;
@@ -143,6 +158,52 @@ printf("appendVar %d\n", idx);
 	{
 		putVarIdx();
 		putValueVec();
+	}
+};
+
+inline void cvtValueVecToNode(Node& root, const ValueVec& vv)
+{
+	root.child.clear();
+	for (size_t i = 0; i < vv.size(); i++) {
+		std::unique_ptr<Node> n(new Node());
+		n->v = vv[i];
+		root.child.push_back(std::move(n));
+	}
+}
+
+inline void vecToTree(NodeVec& stack)
+{
+#if 0
+	size_t i = 0;
+	while (i < stack.size()) {
+		if (stack[i].child.size() == 2) {
+			Value v = stack[i].v;
+			if (v.type == Op) {
+				NodeVec t;
+				t.
+				continue;
+			}
+		}
+		i++;
+	}
+#endif
+}
+
+struct Ast {
+	TokenList tl;
+	Node root;
+	void put() const
+	{
+		puts("TokenList");
+		tl.put();
+		puts("root");
+		root.put();
+		puts("");
+	}
+	void makeTree()
+	{
+		cvtValueVecToNode(root, tl.vv);
+		vecToTree(root.child);
 	}
 };
 
@@ -218,13 +279,13 @@ struct Parser {
 		return begin;
 	}
 	bool isEnd(const char *begin) const { return begin == end_; }
-	const char *parseTerm(const char *begin, Ast& ast)
+	const char *parseTerm(const char *begin, TokenList& tl)
 	{
 		begin = skipSpace(begin);
 		if (isEnd(begin)) throw cybozu::Exception("num empty");
 		char c = *begin;
 		if (c == '(') {
-			const char *next = parseAddSub(begin + 1, ast);
+			const char *next = parseAddSub(begin + 1, tl);
 			if (!isEnd(next) && *next == ')') return next;
 			throw cybozu::Exception("bad parenthesis") << (isEnd(next) ? '_' : *next);
 		}
@@ -232,7 +293,7 @@ struct Parser {
 			float f;
 			const char *next = parseFloat(&f, begin, end_);
 			if (next) {
-				ast.appendFloat(f);
+				tl.appendFloat(f);
 				return next;
 			}
 		}
@@ -240,39 +301,39 @@ struct Parser {
 			std::string str;
 			const char *next = parseVar(str, begin, end_);
 			if (next) {
-				uint32_t idx = ast.setVarAndGetIdx(str);
-				ast.appendVar(idx);
+				uint32_t idx = tl.setVarAndGetIdx(str);
+				tl.appendVar(idx);
 				return next;
 			}
 		}
 		throw cybozu::Exception("bad syntax") << std::string(begin, end_);
 	}
-	const char *parseMulDiv(const char *begin, Ast& ast)
+	const char *parseMulDiv(const char *begin, TokenList& tl)
 	{
-		begin = parseTerm(begin, ast);
+		begin = parseTerm(begin, tl);
 		while (!isEnd(begin)) {
 			begin = skipSpace(begin);
 			if (isEnd(begin)) break;
 			char c = *begin;
 			if (c == '*' || c == '/') {
-				begin = parseTerm(begin + 1, ast);
-				ast.appendOp('+' ? Mul : Div);
+				begin = parseTerm(begin + 1, tl);
+				tl.appendOp('+' ? Mul : Div);
 				continue;
 			}
 			break;
 		}
 		return begin;
 	}
-	const char *parseAddSub(const char *begin, Ast& ast)
+	const char *parseAddSub(const char *begin, TokenList& tl)
 	{
-		begin = parseMulDiv(begin, ast);
+		begin = parseMulDiv(begin, tl);
 		while (!isEnd(begin)) {
 			begin = skipSpace(begin);
 			if (isEnd(begin)) break;
 			char c = *begin;
 			if (c == '+' || c == '-') {
-				begin = parseMulDiv(begin + 1, ast);
-				ast.appendOp('+' ? Add : Sub);
+				begin = parseMulDiv(begin + 1, tl);
+				tl.appendOp('+' ? Add : Sub);
 				continue;
 			}
 			break;
@@ -283,7 +344,7 @@ struct Parser {
 	{
 		const char *begin = str.c_str();
 		end_ = begin + str.size();
-		begin = parseAddSub(begin, ast);
+		begin = parseAddSub(begin, ast.tl);
 		if (isEnd(begin)) {
 			throw cybozu::Exception("extra string") << std::string(begin, end_);
 		}
