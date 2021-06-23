@@ -345,7 +345,7 @@ struct Parser {
 		const char *begin = str.c_str();
 		end_ = begin + str.size();
 		begin = parseAddSub(begin, ast.tl);
-		if (isEnd(begin)) {
+		if (!isEnd(begin)) {
 			throw cybozu::Exception("extra string") << std::string(begin, end_);
 		}
 	}
