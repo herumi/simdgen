@@ -67,10 +67,9 @@ CYBOZU_TEST_AUTO(parseVar)
 
 CYBOZU_TEST_AUTO(parse)
 {
-	sg::Ast ast;
+	sg::TokenList tl;
 	sg::Parser parser;
-	parser.parse(ast, "x + 1/(2 + x / y) + z");
-	ast.makeTree();
-	ast.put();
+	parser.parse(tl, "x + 1/(2 + x / y) + z");
+	tl.put();
 }
 

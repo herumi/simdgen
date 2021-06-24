@@ -29,9 +29,6 @@ enum OpType {
 	Abs,
 };
 
-struct Node;
-
-typedef std::vector<std::unique_ptr<Node>> NodeVec;
 typedef std::vector<std::string> StrVec;
 
 inline float u2f(uint32_t u)
@@ -91,22 +88,6 @@ struct Value {
 	}
 };
 
-struct Node {
-	Value v;
-	NodeVec child;
-	void put() const
-	{
-		printf("%s", v.getStr().c_str());
-		if (child.empty()) return;
-		printf(" [");
-		for (size_t i = 0; i < child.size(); i++) {
-			if (i > 0) printf(",");
-			child[i]->put();
-		}
-		printf("]");
-	}
-};
-
 typedef std::vector<Value> ValueVec;
 
 struct TokenList {
@@ -145,65 +126,23 @@ struct TokenList {
 	void putVarIdx() const
 	{
 		for (size_t i = 0; i < varIdx.size(); i++) {
-			printf("%s:%d\n", varIdx[i].c_str(), (int)i);
+			printf("%s:%d ", varIdx[i].c_str(), (int)i);
 		}
+		printf("\n");
 	}
 	void putValueVec() const
 	{
 		for (size_t i = 0; i < vv.size(); i++) {
-			vv[i].put();
+			printf("%s ", vv[i].getStr().c_str());
 		}
+		printf("\n");
 	}
 	void put() const
 	{
+		printf("varIdx ");
 		putVarIdx();
+		printf("token ");
 		putValueVec();
-	}
-};
-
-inline void cvtValueVecToNode(Node& root, const ValueVec& vv)
-{
-	root.child.clear();
-	for (size_t i = 0; i < vv.size(); i++) {
-		std::unique_ptr<Node> n(new Node());
-		n->v = vv[i];
-		root.child.push_back(std::move(n));
-	}
-}
-
-inline void vecToTree(NodeVec& stack)
-{
-#if 0
-	size_t i = 0;
-	while (i < stack.size()) {
-		if (stack[i].child.size() == 2) {
-			Value v = stack[i].v;
-			if (v.type == Op) {
-				NodeVec t;
-				t.
-				continue;
-			}
-		}
-		i++;
-	}
-#endif
-}
-
-struct Ast {
-	TokenList tl;
-	Node root;
-	void put() const
-	{
-		puts("TokenList");
-		tl.put();
-		puts("root");
-		root.put();
-		puts("");
-	}
-	void makeTree()
-	{
-		cvtValueVecToNode(root, tl.vv);
-		vecToTree(root.child);
 	}
 };
 
@@ -286,7 +225,7 @@ struct Parser {
 		char c = *begin;
 		if (c == '(') {
 			const char *next = parseAddSub(begin + 1, tl);
-			if (!isEnd(next) && *next == ')') return next;
+			if (!isEnd(next) && *next == ')') return next + 1;
 			throw cybozu::Exception("bad parenthesis") << (isEnd(next) ? '_' : *next);
 		}
 		{
@@ -340,11 +279,11 @@ struct Parser {
 		}
 		return begin;
 	}
-	void parse(Ast& ast, const std::string& str)
+	void parse(TokenList& tl, const std::string& str)
 	{
 		const char *begin = str.c_str();
 		end_ = begin + str.size();
-		begin = parseAddSub(begin, ast.tl);
+		begin = parseAddSub(begin, tl);
 		if (!isEnd(begin)) {
 			throw cybozu::Exception("extra string") << std::string(begin, end_);
 		}
