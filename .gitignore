@@ -1,1 +1,6 @@
+*.o
+*.d
+*.exe
+*.a
+result.txt
 CVS
