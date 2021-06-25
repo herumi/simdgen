@@ -69,7 +69,7 @@ CYBOZU_TEST_AUTO(parse)
 {
 	sg::TokenList tl;
 	sg::Parser parser;
-	parser.parse(tl, "x + 1/(2 + x / y) + z");
+	parser.parse(tl, "x + 1/(2 + x / y) -1.3 + 1/z");
 	tl.put();
 }
 

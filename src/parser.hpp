@@ -30,6 +30,7 @@ enum OpType {
 };
 
 typedef std::vector<std::string> StrVec;
+typedef std::vector<uint32_t> IntVec;
 
 inline float u2f(uint32_t u)
 {
@@ -60,10 +61,10 @@ struct Value {
 		case None:
 			return "None";
 		case Float:
-			snprintf(buf, sizeof(buf), "float{%f}", u2f(v));
+			snprintf(buf, sizeof(buf), "float{%u}", v);
 			break;
 		case Var:
-			snprintf(buf, sizeof(buf), "var{%d}", v);
+			snprintf(buf, sizeof(buf), "var{%u}", v);
 			break;
 		case Op:
 			{
@@ -90,8 +91,20 @@ struct Value {
 
 typedef std::vector<Value> ValueVec;
 
+template<class Vec, class T>
+uint32_t setAndGetIdxT(Vec& vec, const T& x)
+{
+	const uint32_t n = vec.size();
+	for (uint32_t i = 0; i < n; i++) {
+		if (vec[i] == x) return i;
+	}
+	vec.push_back(x);
+	return n;
+}
+
 struct TokenList {
 	StrVec varIdx;
+	IntVec f2uIdx;;
 	ValueVec vv;
 	void appendFloat(float f)
 	{
@@ -107,26 +120,32 @@ struct TokenList {
 		v.v = kind;
 		vv.push_back(v);
 	}
-	void appendVar(int idx)
+	void appendIdx(ValueType type, uint32_t idx)
 	{
 		Value v;
-		v.type = Var;
+		v.type = type;
 		v.v = idx;
 		vv.push_back(v);
 	}
+	uint32_t setFloatAndGetIdx(float f)
+	{
+		return setAndGetIdxT(f2uIdx, f2u(f));
+	}
 	uint32_t setVarAndGetIdx(const std::string& s)
 	{
-		const uint32_t n = varIdx.size();
-		for (uint32_t i = 0; i < n; i++) {
-			if (varIdx[i] == s) return i;
+		return setAndGetIdxT(varIdx, s);
+	}
+	void putFloatIdx() const
+	{
+		for (uint32_t i = 0; i < f2uIdx.size(); i++) {
+			printf("%u:%f ", i, u2f(f2uIdx[i]));
 		}
-		varIdx.push_back(s);
-		return n;
+		printf("\n");
 	}
 	void putVarIdx() const
 	{
-		for (size_t i = 0; i < varIdx.size(); i++) {
-			printf("%s:%d ", varIdx[i].c_str(), (int)i);
+		for (uint32_t i = 0; i < varIdx.size(); i++) {
+			printf("%u:%s ", i, varIdx[i].c_str());
 		}
 		printf("\n");
 	}
@@ -141,6 +160,8 @@ struct TokenList {
 	{
 		printf("varIdx ");
 		putVarIdx();
+		printf("floatIdx ");
+		putFloatIdx();
 		printf("token ");
 		putValueVec();
 	}
@@ -232,7 +253,8 @@ struct Parser {
 			float f;
 			const char *next = parseFloat(&f, begin, end_);
 			if (next) {
-				tl.appendFloat(f);
+				uint32_t idx = tl.setFloatAndGetIdx(f);
+				tl.appendIdx(Float, idx);
 				return next;
 			}
 		}
@@ -241,7 +263,7 @@ struct Parser {
 			const char *next = parseVar(str, begin, end_);
 			if (next) {
 				uint32_t idx = tl.setVarAndGetIdx(str);
-				tl.appendVar(idx);
+				tl.appendIdx(Var, idx);
 				return next;
 			}
 		}
