@@ -226,7 +226,7 @@ struct TokenList {
 				case Log:
 				case Tanh:
 					assert(pos > 0);
-					printf("%s z%u\n", v.getStr().c_str(), pos);
+					printf("%s z%u\n", v.getStr().c_str(), pos - 1);
 					break;
 				default:
 					throw cybozu::Exception("bad func") << i << v.v;
