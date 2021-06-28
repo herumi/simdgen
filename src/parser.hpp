@@ -30,8 +30,17 @@ enum OpType {
 };
 
 enum FuncType {
-	Exp,
 	Abs,
+	Exp,
+	Log,
+	Tanh,
+};
+
+const char *funcNameTbl[] = {
+	"abs",
+	"exp",
+	"log",
+	"tanh",
 };
 
 typedef std::vector<std::string> StrVec;
@@ -87,15 +96,10 @@ struct Value {
 				return tbl[v];
 			}
 		case Func:
-			{
-				const char *tbl[] = {
-					"exp",
-				};
-				if (v >= CYBOZU_NUM_OF_ARRAY(tbl)) {
-					throw cybozu::Exception("bad Func") << v;
-				}
-				return tbl[v];
+			if (v >= CYBOZU_NUM_OF_ARRAY(funcNameTbl)) {
+				throw cybozu::Exception("bad Func") << v;
 			}
+			return funcNameTbl[v];
 		}
 		return buf;
 	}
@@ -217,10 +221,11 @@ struct TokenList {
 				break;
 			case Func:
 				switch (v.v) {
-				case Exp:
 				case Abs:
+				case Exp:
+				case Log:
+				case Tanh:
 					assert(pos > 0);
-					pos--;
 					printf("%s z%u\n", v.getStr().c_str(), pos);
 					break;
 				default:
@@ -290,15 +295,9 @@ const char* parseVar(std::string& v , const char *begin, const char *end)
 
 int getFuncKind(const std::string& str)
 {
-	const struct {
-		const char *name;
-		int kind;
-	} tbl[] = {
-		{ "exp", Exp },
-	};
-	for (size_t i = 0; i < CYBOZU_NUM_OF_ARRAY(tbl); i++) {
-		if (str == tbl[i].name) {
-			return tbl[i].kind;
+	for (uint32_t i = 0; i < CYBOZU_NUM_OF_ARRAY(funcNameTbl); i++) {
+		if (str == funcNameTbl[i]) {
+			return i;
 		}
 	}
 	throw cybozu::Exception("getFuncKind:bad name") << str;
@@ -338,7 +337,7 @@ struct Parser {
 		{
 			std::string str;
 			const char *next = parseVar(str, begin, end_);
-			if (next && *next == '(') {
+			if (next && *(next = skipSpace(next)) == '(') {
 				int kind = getFuncKind(str);
 				const char *next2 = parseAddSub(next + 1, tl);
 				if (!isEnd(next2) && *next2 == ')') {
