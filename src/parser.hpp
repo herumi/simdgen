@@ -19,6 +19,7 @@ enum ValueType {
 	Float,
 	Var,
 	Op,
+	Func,
 };
 
 enum OpType {
@@ -26,6 +27,10 @@ enum OpType {
 	Sub,
 	Mul,
 	Div,
+};
+
+enum FuncType {
+	Exp,
 	Abs,
 };
 
@@ -73,10 +78,21 @@ struct Value {
 					"sub",
 					"mul",
 					"div",
+					"exp",
 					"abs",
 				};
 				if (v >= CYBOZU_NUM_OF_ARRAY(tbl)) {
 					throw cybozu::Exception("bad Op") << v;
+				}
+				return tbl[v];
+			}
+		case Func:
+			{
+				const char *tbl[] = {
+					"exp",
+				};
+				if (v >= CYBOZU_NUM_OF_ARRAY(tbl)) {
+					throw cybozu::Exception("bad Func") << v;
 				}
 				return tbl[v];
 			}
@@ -117,6 +133,13 @@ struct TokenList {
 	{
 		Value v;
 		v.type = Op;
+		v.v = kind;
+		vv.push_back(v);
+	}
+	void appendFunc(int kind)
+	{
+		Value v;
+		v.type = Func;
 		v.v = kind;
 		vv.push_back(v);
 	}
@@ -168,15 +191,15 @@ struct TokenList {
 	void exec() const
 	{
 		const size_t n = vv.size();
-		std::vector<const Value*> st(n);
+		std::vector<const Value*> regTbl(n);
 		uint32_t pos = 0;
 		for (size_t i = 0; i < n; i++) {
 			const Value& v = vv[i];
 			switch (v.type) {
 			case Float:
 			case Var:
-				printf("copy z%u, %s\n", pos, v.getStr().c_str());
-				st[pos++] = &v;
+				printf("load z%u, %s\n", pos, v.getStr().c_str());
+				regTbl[pos++] = &v;
 				break;
 			case Op:
 				switch (v.v) {
@@ -188,9 +211,20 @@ struct TokenList {
 					pos--;
 					printf("%s z%u, z%u\n", v.getStr().c_str(), pos - 1, pos);
 					break;
-				case Abs:
 				default:
 					throw cybozu::Exception("bad op") << i << v.v;
+				}
+				break;
+			case Func:
+				switch (v.v) {
+				case Exp:
+				case Abs:
+					assert(pos > 0);
+					pos--;
+					printf("%s z%u\n", v.getStr().c_str(), pos);
+					break;
+				default:
+					throw cybozu::Exception("bad func") << i << v.v;
 				}
 				break;
 			default:
@@ -254,6 +288,22 @@ const char* parseVar(std::string& v , const char *begin, const char *end)
 	return begin;
 }
 
+int getFuncKind(const std::string& str)
+{
+	const struct {
+		const char *name;
+		int kind;
+	} tbl[] = {
+		{ "exp", Exp },
+	};
+	for (size_t i = 0; i < CYBOZU_NUM_OF_ARRAY(tbl); i++) {
+		if (str == tbl[i].name) {
+			return tbl[i].kind;
+		}
+	}
+	throw cybozu::Exception("getFuncKind:bad name") << str;
+}
+
 /*
 	var = [a-zA-Z_]([a-zA-Z_0-9]*)
 	num = float
@@ -276,12 +326,6 @@ struct Parser {
 	{
 		begin = skipSpace(begin);
 		if (isEnd(begin)) throw cybozu::Exception("num empty");
-		char c = *begin;
-		if (c == '(') {
-			const char *next = parseAddSub(begin + 1, tl);
-			if (!isEnd(next) && *next == ')') return next + 1;
-			throw cybozu::Exception("bad parenthesis") << (isEnd(next) ? '_' : *next);
-		}
 		{
 			float f;
 			const char *next = parseFloat(&f, begin, end_);
@@ -294,10 +338,25 @@ struct Parser {
 		{
 			std::string str;
 			const char *next = parseVar(str, begin, end_);
+			if (next && *next == '(') {
+				int kind = getFuncKind(str);
+				const char *next2 = parseAddSub(next + 1, tl);
+				if (!isEnd(next2) && *next2 == ')') {
+					tl.appendFunc(kind);
+					return next2 + 1;
+				}
+				throw cybozu::Exception("bad func") << str;
+			}
 			if (next) {
 				uint32_t idx = tl.setVarAndGetIdx(str);
 				tl.appendIdx(Var, idx);
 				return next;
+			}
+			char c = *begin;
+			if (c == '(') {
+				const char *next = parseAddSub(begin + 1, tl);
+				if (!isEnd(next) && *next == ')') return next + 1;
+				throw cybozu::Exception("bad parenthesis") << (isEnd(next) ? '_' : *next);
 			}
 		}
 		throw cybozu::Exception("bad syntax") << std::string(begin, end_);
