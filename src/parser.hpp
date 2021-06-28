@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 #include <memory>
-#include <stack>
+#include <assert.h>
 #include <cybozu/exception.hpp>
 
 namespace sg {
@@ -165,6 +165,47 @@ struct TokenList {
 		printf("token ");
 		putValueVec();
 	}
+	void exec() const
+	{
+		const size_t n = vv.size();
+		std::vector<const Value*> st(n);
+		size_t pos = 0;
+		for (size_t i = 0; i < n; i++) {
+			const Value& v = vv[i];
+			switch (v.type) {
+			case Float:
+			case Var:
+				st[++pos] = &v;
+				break;
+			case Op:
+				switch (v.v) {
+				case Add:
+					assert(pos > 0);
+					printf("add %s, %s\n", st[pos - 1]->getStr().c_str(), st[pos]->getStr().c_str());
+					pos--;
+					break;
+				case Sub:
+					printf("sub %s, %s\n", st[pos - 1]->getStr().c_str(), st[pos]->getStr().c_str());
+					pos--;
+					break;
+				case Mul:
+					printf("mul %s, %s\n", st[pos - 1]->getStr().c_str(), st[pos]->getStr().c_str());
+					pos--;
+					break;
+				case Div:
+					printf("div %s, %s\n", st[pos - 1]->getStr().c_str(), st[pos]->getStr().c_str());
+					pos--;
+					break;
+				case Abs:
+				default:
+					throw cybozu::Exception("bad op") << i << v.v;
+				}
+				break;
+			default:
+				throw cybozu::Exception("bad type") << i << v.type;
+			}
+		}
+	}
 };
 
 inline bool isSpace(char c) {
@@ -278,7 +319,7 @@ struct Parser {
 			char c = *begin;
 			if (c == '*' || c == '/') {
 				begin = parseTerm(begin + 1, tl);
-				tl.appendOp('+' ? Mul : Div);
+				tl.appendOp(c == '*' ? Mul : Div);
 				continue;
 			}
 			break;
@@ -294,7 +335,7 @@ struct Parser {
 			char c = *begin;
 			if (c == '+' || c == '-') {
 				begin = parseMulDiv(begin + 1, tl);
-				tl.appendOp('+' ? Add : Sub);
+				tl.appendOp(c == '+' ? Add : Sub);
 				continue;
 			}
 			break;
