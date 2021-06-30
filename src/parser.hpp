@@ -30,14 +30,14 @@ enum OpType {
 };
 
 enum FuncType {
-	Abs,
+	Inv,
 	Exp,
 	Log,
 	Tanh,
 };
 
 const char *funcNameTbl[] = {
-	"abs",
+	"inv",
 	"exp",
 	"log",
 	"tanh",
@@ -87,8 +87,6 @@ struct Value {
 					"sub",
 					"mul",
 					"div",
-					"exp",
-					"abs",
 				};
 				if (v >= CYBOZU_NUM_OF_ARRAY(tbl)) {
 					throw cybozu::Exception("bad Op") << v;
@@ -121,6 +119,45 @@ uint32_t setAndGetIdxT(Vec& vec, const T& x)
 	vec.push_back(x);
 	return n;
 }
+
+struct Printer {
+	void copy(int dst, int src)
+	{
+		printf("copy z%d, z%d\n", dst, src);
+	}
+	void add(int dst, int src1, int src2)
+	{
+		printf("add z%d, z%d, z%d\n", dst, src1, src2);
+	}
+	void sub(int dst, int src1, int src2)
+	{
+		printf("sub z%d, z%d, z%d\n", dst, src1, src2);
+	}
+	void mul(int dst, int src1, int src2)
+	{
+		printf("mul z%d, z%d, z%d\n", dst, src1, src2);
+	}
+	void div(int dst, int src1, int src2)
+	{
+		printf("div z%d, z%d, z%d\n", dst, src1, src2);
+	}
+	void inv(int inout)
+	{
+		printf("inv z%d\n", inout);
+	}
+	void exp(int inout)
+	{
+		printf("exp z%d\n", inout);
+	}
+	void log(int inout)
+	{
+		printf("log z%d\n", inout);
+	}
+	void tanh(int inout)
+	{
+		printf("tanh z%d\n", inout);
+	}
+};
 
 struct TokenList {
 	StrVec varIdx;
@@ -192,7 +229,8 @@ struct TokenList {
 		printf("token ");
 		putValueVec();
 	}
-	void exec() const
+	template<class Generator>
+	void exec(Generator *gen) const
 	{
 		const size_t n = vv.size();
 		std::vector<const Value*> regTbl(n);
@@ -202,32 +240,28 @@ struct TokenList {
 			switch (v.type) {
 			case Float:
 			case Var:
-				printf("load z%u, %s\n", pos, v.getStr().c_str());
+				gen->copy(pos, v.v);
 				regTbl[pos++] = &v;
 				break;
 			case Op:
+				assert(pos > 1);
+				pos--;
 				switch (v.v) {
-				case Add:
-				case Sub:
-				case Mul:
-				case Div:
-					assert(pos > 1);
-					pos--;
-					printf("%s z%u, z%u\n", v.getStr().c_str(), pos - 1, pos);
-					break;
+				case Add: gen->add(pos - 1, pos - 1, pos); break;
+				case Sub: gen->sub(pos - 1, pos - 1, pos); break;
+				case Mul: gen->mul(pos - 1, pos - 1, pos); break;
+				case Div: gen->div(pos - 1, pos - 1, pos); break;
 				default:
 					throw cybozu::Exception("bad op") << i << v.v;
 				}
 				break;
 			case Func:
+				assert(pos > 0);
 				switch (v.v) {
-				case Abs:
-				case Exp:
-				case Log:
-				case Tanh:
-					assert(pos > 0);
-					printf("%s z%u\n", v.getStr().c_str(), pos - 1);
-					break;
+				case Inv: gen->inv(pos - 1); break;
+				case Exp: gen->exp(pos - 1); break;
+				case Log: gen->log(pos - 1); break;
+				case Tanh: gen->tanh(pos - 1); break;
 				default:
 					throw cybozu::Exception("bad func") << i << v.v;
 				}
@@ -236,6 +270,11 @@ struct TokenList {
 				throw cybozu::Exception("bad type") << i << v.type;
 			}
 		}
+	}
+	void exec() const
+	{
+		Printer printer;
+		exec(&printer);
 	}
 };
 
