@@ -120,7 +120,35 @@ uint32_t setAndGetIdxT(Vec& vec, const T& x)
 	return n;
 }
 
-struct Printer {
+struct GeneratorBase {
+	int regNum_;
+	GeneratorBase()
+		: regNum_(0)
+	{
+	}
+	virtual ~GeneratorBase()
+	{
+	}
+	virtual void reset()
+	{
+		regNum_ = 0;
+	}
+	int allocReg()
+	{
+		return regNum_++;
+	}
+	int getCurReg() const { return regNum_; }
+};
+
+struct Printer : GeneratorBase {
+	void setInt(int dst, uint32_t u)
+	{
+		printf("setImm z%d, %08x\n", dst, u);
+	}
+	void loadVar(int dst, uint32_t u)
+	{
+		printf("loadVar z%d, [%u]\n", dst, u);
+	}
 	void copy(int dst, int src)
 	{
 		printf("copy z%d, z%d\n", dst, src);
@@ -230,11 +258,27 @@ struct TokenList {
 		putValueVec();
 	}
 	template<class Generator>
-	void exec(Generator *gen) const
+	void setFloatConst(Generator *gen) const
+	{
+		for (size_t i = 0; i < f2uIdx.size(); i++) {
+			uint32_t idx = gen->allocReg();
+			gen->setInt(idx, f2uIdx[i]);
+		}
+	}
+	template<class Generator>
+	void setVar(Generator *gen) const
+	{
+		for (uint32_t i = 0; i < varIdx.size(); i++) {
+			uint32_t idx = gen->allocReg();
+			gen->loadVar(idx, i);
+		}
+	}
+	template<class Generator>
+	void execOneLoop(Generator *gen) const
 	{
 		const size_t n = vv.size();
 		std::vector<const Value*> regTbl(n);
-		uint32_t pos = 0;
+		uint32_t pos = gen->getCurReg();
 		for (size_t i = 0; i < n; i++) {
 			const Value& v = vv[i];
 			switch (v.type) {
@@ -274,7 +318,9 @@ struct TokenList {
 	void exec() const
 	{
 		Printer printer;
-		exec(&printer);
+		setVar(&printer);
+		setFloatConst(&printer);
+		execOneLoop(&printer);
 	}
 };
 

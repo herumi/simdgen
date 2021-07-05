@@ -68,6 +68,14 @@ CYBOZU_TEST_AUTO(parseVar)
 CYBOZU_TEST_AUTO(parse)
 {
 	sg::TokenList tl;
+	const char *varTbl[] = {
+		"x",
+		"y",
+		"z",
+	};
+	for (size_t i = 0; i < CYBOZU_NUM_OF_ARRAY(varTbl); i++) {
+		tl.setVarAndGetIdx(varTbl[i]);
+	}
 	sg::Parser parser;
 //	const char *src = "x + 1/(2 + exp(x / y)) -1.3 + 1/z";
 	const char *src = "log(exp(x)+tanh(y)*1.2)";
