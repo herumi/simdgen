@@ -40,6 +40,7 @@ ifneq ($(findstring $(ARCH),x86_64/amd64),)
   BIT=64
   BIT_OPT=-m64
   #ASM=nasm -felf64
+  XBYAK?=1
 endif
 ifeq ($(ARCH),x86)
   CPU=x86
@@ -54,6 +55,7 @@ endif
 ifneq ($(findstring $(ARCH),aarch64/arm64),)
   CPU=aarch64
   BIT=64
+  XBYAK_AARCH64?=1
 endif
 ifeq ($(findstring $(OS),mac/mac-m1/mingw64/openbsd),)
   LDFLAGS+=-lrt
@@ -98,6 +100,14 @@ TEST_SRC=parser_test.cpp
 LIB_OBJ=$(OBJ_DIR)/main.o
 ifeq ($(CPU),x86-64)
   MCL_USE_XBYAK?=1
+endif
+
+ifeq ($(XBYAK),1)
+  CFLAGS+=-I ext/xbyak
+endif
+ifeq ($(XBYAK_AARCH64),1)
+  CFLAGS+=-I ext/xbyak_aarch64
+  LDFLAGS+=-L ext/xbyak_aarch64/lib -lxbyak_aarch64
 endif
 
 ##################################################################

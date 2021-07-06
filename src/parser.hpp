@@ -11,6 +11,7 @@
 #include <memory>
 #include <assert.h>
 #include <cybozu/exception.hpp>
+#include "gen.hpp"
 
 namespace sg {
 
@@ -120,73 +121,6 @@ uint32_t setAndGetIdxT(Vec& vec, const T& x)
 	return n;
 }
 
-struct GeneratorBase {
-	int regNum_;
-	GeneratorBase()
-		: regNum_(0)
-	{
-	}
-	virtual ~GeneratorBase()
-	{
-	}
-	virtual void reset()
-	{
-		regNum_ = 0;
-	}
-	int allocReg()
-	{
-		return regNum_++;
-	}
-	int getCurReg() const { return regNum_; }
-};
-
-struct Printer : GeneratorBase {
-	void setInt(int dst, uint32_t u)
-	{
-		printf("setImm z%d, %08x\n", dst, u);
-	}
-	void loadVar(int dst, uint32_t u)
-	{
-		printf("loadVar z%d, [%u]\n", dst, u);
-	}
-	void copy(int dst, int src)
-	{
-		printf("copy z%d, z%d\n", dst, src);
-	}
-	void add(int dst, int src1, int src2)
-	{
-		printf("add z%d, z%d, z%d\n", dst, src1, src2);
-	}
-	void sub(int dst, int src1, int src2)
-	{
-		printf("sub z%d, z%d, z%d\n", dst, src1, src2);
-	}
-	void mul(int dst, int src1, int src2)
-	{
-		printf("mul z%d, z%d, z%d\n", dst, src1, src2);
-	}
-	void div(int dst, int src1, int src2)
-	{
-		printf("div z%d, z%d, z%d\n", dst, src1, src2);
-	}
-	void inv(int inout)
-	{
-		printf("inv z%d\n", inout);
-	}
-	void exp(int inout)
-	{
-		printf("exp z%d\n", inout);
-	}
-	void log(int inout)
-	{
-		printf("log z%d\n", inout);
-	}
-	void tanh(int inout)
-	{
-		printf("tanh z%d\n", inout);
-	}
-};
-
 struct TokenList {
 	StrVec varIdx;
 	IntVec f2uIdx;;
@@ -262,7 +196,7 @@ struct TokenList {
 	{
 		for (size_t i = 0; i < f2uIdx.size(); i++) {
 			uint32_t idx = gen->allocReg();
-			gen->setInt(idx, f2uIdx[i]);
+			gen->gen_setInt(idx, f2uIdx[i]);
 		}
 	}
 	template<class Generator>
@@ -270,7 +204,7 @@ struct TokenList {
 	{
 		for (uint32_t i = 0; i < varIdx.size(); i++) {
 			uint32_t idx = gen->allocReg();
-			gen->loadVar(idx, i);
+			gen->gen_loadVar(idx, i);
 		}
 	}
 	template<class Generator>
@@ -284,17 +218,17 @@ struct TokenList {
 			switch (v.type) {
 			case Float:
 			case Var:
-				gen->copy(pos, v.v);
+				gen->gen_copy(pos, v.v);
 				regTbl[pos++] = &v;
 				break;
 			case Op:
 				assert(pos > 1);
 				pos--;
 				switch (v.v) {
-				case Add: gen->add(pos - 1, pos - 1, pos); break;
-				case Sub: gen->sub(pos - 1, pos - 1, pos); break;
-				case Mul: gen->mul(pos - 1, pos - 1, pos); break;
-				case Div: gen->div(pos - 1, pos - 1, pos); break;
+				case Add: gen->gen_add(pos - 1, pos - 1, pos); break;
+				case Sub: gen->gen_sub(pos - 1, pos - 1, pos); break;
+				case Mul: gen->gen_mul(pos - 1, pos - 1, pos); break;
+				case Div: gen->gen_div(pos - 1, pos - 1, pos); break;
 				default:
 					throw cybozu::Exception("bad op") << i << v.v;
 				}
@@ -302,10 +236,10 @@ struct TokenList {
 			case Func:
 				assert(pos > 0);
 				switch (v.v) {
-				case Inv: gen->inv(pos - 1); break;
-				case Exp: gen->exp(pos - 1); break;
-				case Log: gen->log(pos - 1); break;
-				case Tanh: gen->tanh(pos - 1); break;
+				case Inv: gen->gen_inv(pos - 1); break;
+				case Exp: gen->gen_exp(pos - 1); break;
+				case Log: gen->gen_log(pos - 1); break;
+				case Tanh: gen->gen_tanh(pos - 1); break;
 				default:
 					throw cybozu::Exception("bad func") << i << v.v;
 				}
@@ -315,12 +249,15 @@ struct TokenList {
 			}
 		}
 	}
-	void exec() const
+	void execPrinter() const
 	{
 		Printer printer;
 		setVar(&printer);
 		setFloatConst(&printer);
+		printer.gen_init();
 		execOneLoop(&printer);
+//		printer.gen_saveVar(printer.getCurReg());
+		printer.gen_end();
 	}
 };
 

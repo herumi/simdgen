@@ -82,6 +82,6 @@ CYBOZU_TEST_AUTO(parse)
 	printf("src=%s\n", src);
 	parser.parse(tl, src);
 	tl.put();
-	tl.exec();
+	tl.execPrinter();
 }
 
