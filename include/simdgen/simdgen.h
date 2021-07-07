@@ -26,35 +26,19 @@
 	#define SG_DLL_API
 #endif
 
+#if !(defined(SG_AVX) || defined(XG_SVE))
+	#if defined(_WIN64) || defined(__x86_64__)
+		#define SG_AVX
+	#else
+		#define SG_SVE
+	#endif
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define SG_NOERR 0
-
-#define SG_OP_COPY 0
-#define SG_OP_ADD 1
-#define SG_OP_SUB 2
-#define SG_OP_MUL 3
-#define SG_OP_DIV 4
-#define SG_OP_EXP 5
-#define SG_OP_LOG 6
-
-typedef struct {
-	int unrollN;
-} SgPara;
-
 typedef struct SgCode SgCode;
-
-#define SG_FUNC_SRC_MAX_NUM 5
-typedef struct {
-	void *dst;
-	const void *src[SG_FUNC_SRC_MAX_NUM];
-	uint32_t srcN;
-} FuncArg;
-
-typedef void (*sgFuncType)(const FuncArg *arg, uint32_t n);
-
 /*
 	create SgCode handler
 */
@@ -63,14 +47,6 @@ SG_DLL_API int SgCreate(SgCode **code);
 	destroy SgCode handler
 */
 SG_DLL_API void SgDestroy(SgCode *code);
-/*
-	parse src
-*/
-SG_DLL_API void SgParse(SgCode *code, FuncArg *arg, const char *src, const SgPara *para);
-/*
-	finish code generator and get address and size of code
-*/
-SG_DLL_API int SgGet(void *const *addr, uint32_t *size, SgCode *code);
 
 #ifdef __cplusplus
 }

@@ -1,5 +1,5 @@
 #include "gen.hpp"
-#if defined(_WIN64) || defined(__x86_64__)
+#ifdef SG_AVX
 #include "x64/main.hpp"
 #endif
 #include <stdio.h>

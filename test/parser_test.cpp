@@ -85,3 +85,6 @@ CYBOZU_TEST_AUTO(parse)
 	tl.execPrinter();
 }
 
+CYBOZU_TEST_AUTO(x64)
+{
+}

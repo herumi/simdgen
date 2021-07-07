@@ -1,4 +1,5 @@
 #pragma once
+#include <simdgen/simdgen.h>
 #include <stdint.h>
 #include <stdio.h>
 
