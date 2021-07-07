@@ -78,13 +78,25 @@ CYBOZU_TEST_AUTO(parse)
 	}
 	sg::Parser parser;
 //	const char *src = "x + 1/(2 + exp(x / y)) -1.3 + 1/z";
-	const char *src = "log(exp(x)+tanh(y)*1.2)";
+//	const char *src = "log(exp(x)+tanh(y)*1.2)";
+	const char *src = "x+1";
 	printf("src=%s\n", src);
 	parser.parse(tl, src);
 	tl.put();
 	tl.execPrinter();
 }
 
+#ifdef SG_X64
+#include "x64/main.hpp"
 CYBOZU_TEST_AUTO(x64)
 {
+	sg::TokenList tl;
+	tl.setVarAndGetIdx("x");
+	sg::Parser parser;
+	const char *src = "x+1";
+	parser.parse(tl, src);
+	sg::Code gen;
+	tl.exec(gen);
 }
+#endif
+

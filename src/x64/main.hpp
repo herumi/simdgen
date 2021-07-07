@@ -53,8 +53,6 @@ struct UsedReg {
 
 struct Env {
 	StackFrame *sf;
-	Label lp;
-	Label exit;
 	Env()
 		: sf(0)
 	{
@@ -71,14 +69,21 @@ struct Code : sg::GeneratorBase, CodeGenerator {
 	MIE_ALIGN(4096) uint8_t buf_[dataSize + codeSize];
 	Env env;
 	FuncFloat1 *addr;
+	Label lpL;
+	Label exitL;
 	Code()
 		: CodeGenerator(sizeof(buf_), DontSetProtectRWE)
 		, env()
 		, addr(0)
 	{
 	}
+	~Code()
+	{
+		setProtectModeRW();
+	}
 	void gen_init()
 	{
+puts("III");
 #if 0
 		Cpu cpu;
 		if (!cpu.has(Xbyak::util::Cpu::tAVX512F)) {
@@ -88,57 +93,70 @@ struct Code : sg::GeneratorBase, CodeGenerator {
 		setSize(dataSize);
 		addr = getCurr<FuncFloat1*>();
 		env.sf = new StackFrame(this, 3);
+puts("111");
 		const Reg64& n = env.sf->p[2];
-	L(env.lp);
+	L(lpL);
 		test(n, n);
-		jz(env.exit);
+		jz(exitL);
+puts("QQQ");
 	}
 	void gen_setInt(int dst, uint32_t u)
 	{
-		mov(eax, u);
-		vmovd(Xmm(dst), eax);
+//		mov(eax, u);
+//		vmovd(Xmm(dst), eax);
 	}
 	void gen_loadVar(int dst, uint32_t u)
 	{
-		vmovss(Xmm(dst), ptr[env.sf->p[1] + u * 4]);
+//		vmovss(Xmm(dst), ptr[env.sf->p[1] + u * 4]);
 	}
 	void gen_saveVar(uint32_t u, int src)
 	{
-		vmovss(ptr[env.sf->p[0] + u * 4], Xmm(src));
+//		vmovss(ptr[env.sf->p[0] + u * 4], Xmm(src));
 	}
 	void gen_copy(int dst, int src)
 	{
-		vmovss(Xmm(dst), Xmm(src));
+//		vmovss(Xmm(dst), Xmm(src));
 	}
 	void gen_add(int dst, int src1, int src2)
 	{
-		vaddss(Xmm(dst), Xmm(src1), Xmm(src2));
+//		vaddss(Xmm(dst), Xmm(src1), Xmm(src2));
 	}
 	void gen_sub(int dst, int src1, int src2)
 	{
-		vsubss(Xmm(dst), Xmm(src1), Xmm(src2));
+//		vsubss(Xmm(dst), Xmm(src1), Xmm(src2));
 	}
 	void gen_mul(int dst, int src1, int src2)
 	{
-		vmulss(Xmm(dst), Xmm(src1), Xmm(src2));
+//		vmulss(Xmm(dst), Xmm(src1), Xmm(src2));
 	}
 	void gen_div(int dst, int src1, int src2)
 	{
-		vdivss(Xmm(dst), Xmm(src1), Xmm(src2));
+//		vdivss(Xmm(dst), Xmm(src1), Xmm(src2));
+	}
+	void gen_inv(int inout)
+	{
+		throw cybozu::Exception("not support gen_inv") << inout;
+	}
+	void gen_exp(int inout)
+	{
+		throw cybozu::Exception("not support gen_exp") << inout;
+	}
+	void gen_log(int inout)
+	{
+		throw cybozu::Exception("not support gen_log") << inout;
+	}
+	void gen_tanh(int inout)
+	{
+		throw cybozu::Exception("not support gen_tanh") << inout;
 	}
 	void gen_end()
 	{
 		add(env.sf->p[1], 4);
 		sub(env.sf->p[2], 1);
-		jnz(env.lp, T_NEAR);
-	L(env.exit);
+		jnz(lpL, T_NEAR);
+	L(exitL);
 		env.sf->close();
 		setProtectModeRE();
-	}
-	~Code()
-	{
-		delete env.sf;
-		setProtectModeRW();
 	}
 };
 

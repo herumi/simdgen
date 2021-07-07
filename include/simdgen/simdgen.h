@@ -28,9 +28,9 @@
 
 #if !(defined(SG_AVX) || defined(XG_SVE))
 	#if defined(_WIN64) || defined(__x86_64__)
-		#define SG_AVX
+		#define SG_X64
 	#else
-		#define SG_SVE
+		#define SG_AARCH64
 	#endif
 #endif
 

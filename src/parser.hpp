@@ -192,43 +192,45 @@ struct TokenList {
 		putValueVec();
 	}
 	template<class Generator>
-	void setFloatConst(Generator *gen) const
+	void setFloatConst(Generator& gen) const
 	{
 		for (size_t i = 0; i < f2uIdx.size(); i++) {
-			uint32_t idx = gen->allocReg();
-			gen->gen_setInt(idx, f2uIdx[i]);
+			uint32_t idx = gen.allocReg();
+			gen.gen_setInt(idx, f2uIdx[i]);
 		}
 	}
 	template<class Generator>
-	void setVar(Generator *gen) const
+	void setVar(Generator& gen) const
 	{
 		for (uint32_t i = 0; i < varIdx.size(); i++) {
-			uint32_t idx = gen->allocReg();
-			gen->gen_loadVar(idx, i);
+			uint32_t idx = gen.allocReg();
+			gen.gen_loadVar(idx, i);
 		}
 	}
 	template<class Generator>
-	void execOneLoop(Generator *gen) const
+	void execOneLoop(Generator& gen) const
 	{
 		const size_t n = vv.size();
 		std::vector<const Value*> regTbl(n);
-		uint32_t pos = gen->getCurReg();
+		uint32_t pos = gen.getCurReg();
+printf("pos=%d\n", pos);
 		for (size_t i = 0; i < n; i++) {
+printf("i=%zd\n", i);
 			const Value& v = vv[i];
 			switch (v.type) {
 			case Float:
 			case Var:
-				gen->gen_copy(pos, v.v);
+				gen.gen_copy(pos, v.v);
 				regTbl[pos++] = &v;
 				break;
 			case Op:
 				assert(pos > 1);
 				pos--;
 				switch (v.v) {
-				case Add: gen->gen_add(pos - 1, pos - 1, pos); break;
-				case Sub: gen->gen_sub(pos - 1, pos - 1, pos); break;
-				case Mul: gen->gen_mul(pos - 1, pos - 1, pos); break;
-				case Div: gen->gen_div(pos - 1, pos - 1, pos); break;
+				case Add: gen.gen_add(pos - 1, pos - 1, pos); break;
+				case Sub: gen.gen_sub(pos - 1, pos - 1, pos); break;
+				case Mul: gen.gen_mul(pos - 1, pos - 1, pos); break;
+				case Div: gen.gen_div(pos - 1, pos - 1, pos); break;
 				default:
 					throw cybozu::Exception("bad op") << i << v.v;
 				}
@@ -236,10 +238,10 @@ struct TokenList {
 			case Func:
 				assert(pos > 0);
 				switch (v.v) {
-				case Inv: gen->gen_inv(pos - 1); break;
-				case Exp: gen->gen_exp(pos - 1); break;
-				case Log: gen->gen_log(pos - 1); break;
-				case Tanh: gen->gen_tanh(pos - 1); break;
+				case Inv: gen.gen_inv(pos - 1); break;
+				case Exp: gen.gen_exp(pos - 1); break;
+				case Log: gen.gen_log(pos - 1); break;
+				case Tanh: gen.gen_tanh(pos - 1); break;
 				default:
 					throw cybozu::Exception("bad func") << i << v.v;
 				}
@@ -249,15 +251,20 @@ struct TokenList {
 			}
 		}
 	}
+	template<class Generator>
+	void exec(Generator& gen) const
+	{
+		gen.gen_init();
+		setVar(gen);
+		setFloatConst(gen);
+		execOneLoop(gen);
+		gen.gen_saveVar(0, gen.getCurReg());
+		gen.gen_end();
+	}
 	void execPrinter() const
 	{
 		Printer printer;
-		setVar(&printer);
-		setFloatConst(&printer);
-		printer.gen_init();
-		execOneLoop(&printer);
-//		printer.gen_saveVar(printer.getCurReg());
-		printer.gen_end();
+		exec(printer);
 	}
 };
 
