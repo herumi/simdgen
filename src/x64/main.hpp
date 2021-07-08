@@ -63,7 +63,7 @@ struct Env {
 	}
 };
 
-struct Code : sg::GeneratorBase, CodeGenerator {
+struct Code : CodeGenerator, sg::GeneratorBase {
 	static const size_t dataSize = 4096;
 	static const size_t codeSize = 8192;
 	MIE_ALIGN(4096) uint8_t buf_[dataSize + codeSize];
@@ -71,10 +71,12 @@ struct Code : sg::GeneratorBase, CodeGenerator {
 	FuncFloat1 *addr;
 	Label lpL;
 	Label exitL;
+	bool debug;
 	Code()
 		: CodeGenerator(sizeof(buf_), DontSetProtectRWE)
 		, env()
 		, addr(0)
+		, debug(true)
 	{
 	}
 	~Code()
@@ -83,7 +85,7 @@ struct Code : sg::GeneratorBase, CodeGenerator {
 	}
 	void gen_init()
 	{
-puts("III");
+		if (debug) puts("gen_init");
 #if 0
 		Cpu cpu;
 		if (!cpu.has(Xbyak::util::Cpu::tAVX512F)) {
@@ -93,45 +95,56 @@ puts("III");
 		setSize(dataSize);
 		addr = getCurr<FuncFloat1*>();
 		env.sf = new StackFrame(this, 3);
-puts("111");
 		const Reg64& n = env.sf->p[2];
-	L(lpL);
 		test(n, n);
-		jz(exitL);
-puts("QQQ");
+		jz(exitL, T_NEAR);
+	L(lpL);
 	}
 	void gen_setInt(int dst, uint32_t u)
 	{
-//		mov(eax, u);
-//		vmovd(Xmm(dst), eax);
+		if (debug) {
+			printf("mov eax, 0x%08x\n", u);
+			printf("vmovd z%d, eax\n", dst);
+		}
+		mov(eax, u);
+		vmovd(Xmm(dst), eax);
 	}
 	void gen_loadVar(int dst, uint32_t u)
 	{
-//		vmovss(Xmm(dst), ptr[env.sf->p[1] + u * 4]);
+		if (u != 0) throw cybozu::Exception("gen_loadVar") << u;
+		if (debug) printf("vmovss z%d, [%s]\n", dst, env.sf->p[1].toString());
+		vmovss(Xmm(dst), ptr[env.sf->p[1]]);
 	}
 	void gen_saveVar(uint32_t u, int src)
 	{
-//		vmovss(ptr[env.sf->p[0] + u * 4], Xmm(src));
+		if (u != 0) throw cybozu::Exception("gen_saveVar") << u;
+		if (debug) printf("vmovss [%s], z%d\n", env.sf->p[0].toString(), src);
+		vmovss(ptr[env.sf->p[0]], Xmm(src));
 	}
 	void gen_copy(int dst, int src)
 	{
-//		vmovss(Xmm(dst), Xmm(src));
+		if (debug) printf("vmovss z%d, z%d\n", dst, src);
+		vmovss(Xmm(dst), Xmm(src));
 	}
 	void gen_add(int dst, int src1, int src2)
 	{
-//		vaddss(Xmm(dst), Xmm(src1), Xmm(src2));
+		if (debug) printf("vaddss z%d, z%d, z%d\n", dst, src1, src2);
+		vaddss(Xmm(dst), Xmm(src1), Xmm(src2));
 	}
 	void gen_sub(int dst, int src1, int src2)
 	{
-//		vsubss(Xmm(dst), Xmm(src1), Xmm(src2));
+		if (debug) printf("vsubss z%d, z%d, z%d\n", dst, src1, src2);
+		vsubss(Xmm(dst), Xmm(src1), Xmm(src2));
 	}
 	void gen_mul(int dst, int src1, int src2)
 	{
-//		vmulss(Xmm(dst), Xmm(src1), Xmm(src2));
+		if (debug) printf("vmulss z%d, z%d, z%d\n", dst, src1, src2);
+		vmulss(Xmm(dst), Xmm(src1), Xmm(src2));
 	}
 	void gen_div(int dst, int src1, int src2)
 	{
-//		vdivss(Xmm(dst), Xmm(src1), Xmm(src2));
+		if (debug) printf("vdivss z%d, z%d, z%d\n", dst, src1, src2);
+		vdivss(Xmm(dst), Xmm(src1), Xmm(src2));
 	}
 	void gen_inv(int inout)
 	{
@@ -151,7 +164,9 @@ puts("QQQ");
 	}
 	void gen_end()
 	{
+		if (debug) puts("gen_end");
 		add(env.sf->p[1], 4);
+		add(env.sf->p[0], 4);
 		sub(env.sf->p[2], 1);
 		jnz(lpL, T_NEAR);
 	L(exitL);

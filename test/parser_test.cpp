@@ -70,8 +70,8 @@ CYBOZU_TEST_AUTO(parse)
 	sg::TokenList tl;
 	const char *varTbl[] = {
 		"x",
-		"y",
-		"z",
+//		"y",
+//		"z",
 	};
 	for (size_t i = 0; i < CYBOZU_NUM_OF_ARRAY(varTbl); i++) {
 		tl.setVarAndGetIdx(varTbl[i]);
@@ -93,10 +93,16 @@ CYBOZU_TEST_AUTO(x64)
 	sg::TokenList tl;
 	tl.setVarAndGetIdx("x");
 	sg::Parser parser;
-	const char *src = "x+1";
+	const char *src = "x+x*2 -3";
 	parser.parse(tl, src);
 	sg::Code gen;
 	tl.exec(gen);
+	float x[5] = { 1, 2, 3, 4, 5 };
+	float y[5];
+	gen.addr(y, x, 5);
+	for (size_t i = 0; i < 5; i++) {
+		printf("%zd %f %f\n", i, x[i], y[i]);
+	}
 }
 #endif
 

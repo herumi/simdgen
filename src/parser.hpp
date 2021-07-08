@@ -8,6 +8,7 @@
 */
 #include <string>
 #include <vector>
+#include <map>
 #include <memory>
 #include <assert.h>
 #include <cybozu/exception.hpp>
@@ -211,17 +212,15 @@ struct TokenList {
 	void execOneLoop(Generator& gen) const
 	{
 		const size_t n = vv.size();
-		std::vector<const Value*> regTbl(n);
 		uint32_t pos = gen.getCurReg();
-printf("pos=%d\n", pos);
 		for (size_t i = 0; i < n; i++) {
-printf("i=%zd\n", i);
 			const Value& v = vv[i];
 			switch (v.type) {
-			case Float:
 			case Var:
-				gen.gen_copy(pos, v.v);
-				regTbl[pos++] = &v;
+				gen.gen_copy(pos++, v.v + varIdx.size());
+				break;
+			case Float:
+				gen.gen_copy(pos++, v.v);
 				break;
 			case Op:
 				assert(pos > 1);
@@ -255,8 +254,9 @@ printf("i=%zd\n", i);
 	void exec(Generator& gen) const
 	{
 		gen.gen_init();
-		setVar(gen);
 		setFloatConst(gen);
+puts("execOneLoop");
+		setVar(gen);
 		execOneLoop(gen);
 		gen.gen_saveVar(0, gen.getCurReg());
 		gen.gen_end();
