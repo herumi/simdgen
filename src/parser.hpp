@@ -307,21 +307,72 @@ inline bool isSpace(char c) {
 // return next pointer if success else 0
 const char* parseFloat(float *f, const char *begin, const char *end)
 {
+//	printf("parseFloat1=[%s]\n", std::string(begin, end).c_str());
+	/*
+		digits::=digit+
+		(sign)((digits).digists|digits(.))(e(sign)digits)
+		  1                 2              3  4    5
+	*/
+	const char *sign = "+-";
+	const char *digit = "0123456789.";
 	const char *p = 0;
+	int status = 0;
 	while (begin != end) {
 		char c = *begin;
-		if (p == 0 && strchr("+-0123456789", c)) {
-			p = begin;
-			begin++;
-			continue;
+		if (p == 0) {
+			if (strchr(sign, c)) {
+				p = begin++;
+				status = 1;
+				continue;
+			}
+			if (strchr(digit, c)) {
+				p = begin++;
+				status = 2;
+				continue;
+			}
+			break;
 		}
-		if (p && strchr(".e+-0123456789", c)) {
-			begin++;
-			continue;
+		switch (status) {
+		case 1:
+			if (strchr(digit, c)) {
+				begin++;
+				status = 2;
+				continue;
+			} else {
+				goto EXIT;
+			}
+		case 2:
+			if (strchr(digit, c)) {
+				begin++;
+				continue;
+			} else if (c == 'e' || c == 'E') {
+				begin++;
+				status = 3;
+				continue;
+			} else {
+				goto EXIT;
+			}
+		case 3:
+		case 4:
+			if (status == 3 && strchr(sign, c)) {
+				begin++;
+				status = 4;
+				continue;
+			}
+			if (strchr(digit, c)) {
+				begin++;
+				status = 4;
+				continue;
+			} else {
+				goto EXIT;
+			}
+		default:
+			goto EXIT;
 		}
-		break;
 	}
+EXIT:;
 	if (p) {
+//		printf("parseFloat2=[%s]\n", std::string(p, begin).c_str());
 		char *endp;
 		*f = strtof(p, &endp);
 		if (endp == begin) return begin;

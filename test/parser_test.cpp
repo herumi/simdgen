@@ -79,7 +79,7 @@ CYBOZU_TEST_AUTO(parse)
 	sg::Parser parser;
 //	const char *src = "x + 1/(2 + exp(x / y)) -1.3 + 1/z";
 //	const char *src = "log(exp(x)+tanh(y)*1.2)";
-	const char *src = "x+x*2 -3";
+	const char *src = "x*2-3";
 	printf("src=%s\n", src);
 	parser.parse(tl, src);
 	tl.put();
@@ -93,7 +93,7 @@ CYBOZU_TEST_AUTO(x64)
 	sg::TokenList tl;
 	tl.appendVar("x");
 	sg::Parser parser;
-	const char *src = "x+x*2 -3";
+	const char *src = "x*2e3-3.1415";
 	parser.parse(tl, src);
 	sg::Code gen;
 	tl.exec(gen);
