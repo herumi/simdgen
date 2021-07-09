@@ -9,8 +9,12 @@ typedef void FuncFloat1(float *dst, const float *src, size_t n);
 
 struct GeneratorBase {
 	int regNum_;
+	int varBegin_;
+	int varEnd_;
 	GeneratorBase()
 		: regNum_(0)
+		, varBegin_(0)
+		, varEnd_(0)
 	{
 	}
 	virtual ~GeneratorBase()
@@ -24,6 +28,14 @@ struct GeneratorBase {
 	{
 		return regNum_++;
 	}
+	void allocVar(size_t n)
+	{
+		varBegin_ = regNum_;
+		varEnd_ = regNum_ + n;
+		regNum_ += n;
+	}
+	int getVarBeginIdx() const { return varBegin_; }
+	int getVarEndIdx() const { return varEnd_; }
 	int getCurReg() const { return regNum_; }
 };
 

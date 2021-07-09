@@ -10,6 +10,7 @@
 #include <vector>
 #include <map>
 #include <memory>
+#include <iostream>
 #include <assert.h>
 #include <cybozu/exception.hpp>
 #include "gen.hpp"
@@ -47,6 +48,36 @@ const char *funcNameTbl[] = {
 
 typedef std::vector<std::string> StrVec;
 typedef std::vector<uint32_t> IntVec;
+
+template<class T>
+struct Index {
+	std::vector<T> tbl;
+	/*
+		return index of s
+		return -1 if not found
+	*/
+	int getIdx(const T& s, bool doThrow = true) const
+	{
+		for (int i = 0; i < (int)tbl.size(); i++) {
+			if (tbl[i] == s) return i;
+		}
+		if (doThrow) throw cybozu::Exception("getIdx") << s;
+		return -1;
+	}
+	void append(const T& s)
+	{
+		int idx = getIdx(s, false);
+		if (idx < 0) tbl.push_back(s);
+	}
+	void put() const
+	{
+		for (size_t i = 0; i < tbl.size(); i++) {
+			std::cout << i << ":" << tbl[i] << ' ';
+		}
+		std::cout << std::endl;
+	}
+	size_t size() const { return tbl.size(); }
+};
 
 inline float u2f(uint32_t u)
 {
@@ -123,7 +154,7 @@ uint32_t setAndGetIdxT(Vec& vec, const T& x)
 }
 
 struct TokenList {
-	StrVec varIdx;
+	Index<std::string> varIdx;
 	IntVec f2uIdx;;
 	ValueVec vv;
 	void appendFloat(float f)
@@ -158,9 +189,13 @@ struct TokenList {
 	{
 		return setAndGetIdxT(f2uIdx, f2u(f));
 	}
-	uint32_t setVarAndGetIdx(const std::string& s)
+	void appendVar(const std::string& s)
 	{
-		return setAndGetIdxT(varIdx, s);
+		varIdx.append(s);
+	}
+	uint32_t getVarIdx(const std::string& s)
+	{
+		return varIdx.getIdx(s);
 	}
 	void putFloatIdx() const
 	{
@@ -171,10 +206,7 @@ struct TokenList {
 	}
 	void putVarIdx() const
 	{
-		for (uint32_t i = 0; i < varIdx.size(); i++) {
-			printf("%u:%s ", i, varIdx[i].c_str());
-		}
-		printf("\n");
+		varIdx.put();
 	}
 	void putValueVec() const
 	{
@@ -201,11 +233,10 @@ struct TokenList {
 		}
 	}
 	template<class Generator>
-	void setVar(Generator& gen) const
+	void loadVar(Generator& gen) const
 	{
 		for (uint32_t i = 0; i < varIdx.size(); i++) {
-			uint32_t idx = gen.allocReg();
-			gen.gen_loadVar(idx, i);
+			gen.gen_loadVar(gen.getVarBeginIdx() + i, i);
 		}
 	}
 	template<class Generator>
@@ -217,7 +248,7 @@ struct TokenList {
 			const Value& v = vv[i];
 			switch (v.type) {
 			case Var:
-				gen.gen_copy(pos++, v.v + varIdx.size());
+				gen.gen_copy(pos++, gen.getVarBeginIdx() + v.v);
 				break;
 			case Float:
 				gen.gen_copy(pos++, v.v);
@@ -255,8 +286,9 @@ struct TokenList {
 	{
 		gen.gen_init();
 		setFloatConst(gen);
+		gen.allocVar(varIdx.size());
 puts("execOneLoop");
-		setVar(gen);
+		loadVar(gen);
 		execOneLoop(gen);
 		gen.gen_saveVar(0, gen.getCurReg());
 		gen.gen_end();
@@ -376,7 +408,7 @@ struct Parser {
 				throw cybozu::Exception("bad func") << str;
 			}
 			if (next) {
-				uint32_t idx = tl.setVarAndGetIdx(str);
+				uint32_t idx = tl.getVarIdx(str);
 				tl.appendIdx(Var, idx);
 				return next;
 			}
@@ -424,6 +456,7 @@ struct Parser {
 	void parse(TokenList& tl, const std::string& str)
 	{
 		const char *begin = str.c_str();
+		printf("src=%s\n", begin);
 		end_ = begin + str.size();
 		begin = parseAddSub(begin, tl);
 		if (!isEnd(begin)) {

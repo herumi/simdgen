@@ -103,7 +103,7 @@ struct Code : CodeGenerator, sg::GeneratorBase {
 	void gen_setInt(int dst, uint32_t u)
 	{
 		if (debug) {
-			printf("mov eax, 0x%08x\n", u);
+			printf("mov eax, 0x%08x(%f)\n", u, u2f(u));
 			printf("vmovd z%d, eax\n", dst);
 		}
 		mov(eax, u);
