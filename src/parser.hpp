@@ -424,6 +424,10 @@ int getFuncKind(const std::string& str)
 */
 struct Parser {
 	const char *end_;
+	Parser()
+		: end_(0)
+	{
+	}
 	const char *skipSpace(const char *begin)
 	{
 		while (begin != end_) {

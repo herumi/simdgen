@@ -96,6 +96,9 @@ CYBOZU_TEST_AUTO(x64)
 	const char *src = "x*2e3-3.1415";
 	parser.parse(tl, src);
 	sg::Generator gen;
+	sg::GeneratorBase gb;
+	tl.exec(gb);
+	printf("maxDst=%d\n", gb.getMaxDst());
 	tl.exec(gen);
 	float x[5] = { 1, 2, 3, 4, 5 };
 	float y[5];
