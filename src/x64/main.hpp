@@ -63,7 +63,7 @@ struct Env {
 	}
 };
 
-struct Code : CodeGenerator, sg::GeneratorBase {
+struct Generator : CodeGenerator, sg::GeneratorBase {
 	static const size_t dataSize = 4096;
 	static const size_t codeSize = 8192;
 	MIE_ALIGN(4096) uint8_t buf_[dataSize + codeSize];
@@ -72,14 +72,14 @@ struct Code : CodeGenerator, sg::GeneratorBase {
 	Label lpL;
 	Label exitL;
 	bool debug;
-	Code()
+	Generator()
 		: CodeGenerator(sizeof(buf_), DontSetProtectRWE)
 		, env()
 		, addr(0)
 		, debug(true)
 	{
 	}
-	~Code()
+	~Generator()
 	{
 		setProtectModeRW();
 	}

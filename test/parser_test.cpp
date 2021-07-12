@@ -95,7 +95,7 @@ CYBOZU_TEST_AUTO(x64)
 	sg::Parser parser;
 	const char *src = "x*2e3-3.1415";
 	parser.parse(tl, src);
-	sg::Code gen;
+	sg::Generator gen;
 	tl.exec(gen);
 	float x[5] = { 1, 2, 3, 4, 5 };
 	float y[5];
