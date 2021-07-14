@@ -83,7 +83,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	{
 		setProtectModeRW();
 	}
-	void gen_init()
+	void gen_init(const sg::TokenList& tl)
 	{
 		if (debug) puts("gen_init");
 #if 0
@@ -95,6 +95,13 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		setSize(dataSize);
 		addr = getCurr<FuncFloat1*>();
 		env.sf = new StackFrame(this, 3);
+		const uint32_t constN = tl.getConstNum();
+		const uint32_t varN = tl.getVarNum();
+		for (uint32_t i = 0; i < constN; i++) {
+			uint32_t idx = allocReg();
+			gen_setInt(idx, tl.getConstVal(i));
+		}
+		allocVar(varN);
 		const Reg64& n = env.sf->p[2];
 		test(n, n);
 		jz(exitL, T_NEAR);

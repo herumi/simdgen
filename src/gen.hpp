@@ -45,9 +45,16 @@ struct GeneratorBase {
 	int getVarBeginIdx() const { return varBegin_; }
 	int getVarEndIdx() const { return varEnd_; }
 	int getCurReg() const { return regNum_; }
-	virtual void gen_init()
+	virtual void gen_init(const sg::TokenList& tl)
 	{
 		if (print_) puts("init");
+		const uint32_t constN = tl.getConstNum();
+		const uint32_t varN = tl.getVarNum();
+		for (uint32_t i = 0; i < constN; i++) {
+			uint32_t idx = allocReg();
+			gen_setInt(idx, tl.getConstVal(i));
+		}
+		allocVar(varN);
 	}
 	virtual void gen_setInt(int dst, uint32_t u)
 	{
@@ -148,18 +155,13 @@ struct GeneratorBase {
 	template<class TL>
 	void exec(const TL& tl)
 	{
-		const uint32_t varN = tl.getVarNum();
 		const uint32_t constN = tl.getConstNum();
+		const uint32_t varN = tl.getVarNum();
 		const uint32_t tmpN = tl.getMaxTmpNum();
 		printf("#var=%d ", varN);
 		printf("#const=%d ", constN);
 		printf("#tmp=%d\n", tmpN);
-		gen_init();
-		for (uint32_t i = 0; i < constN; i++) {
-			uint32_t idx = allocReg();
-			gen_setInt(idx, tl.getConstVal(i));
-		}
-		allocVar(varN);
+		gen_init(tl);
 puts("execOneLoop");
 		// varN input
 		for (uint32_t i = 0; i < varN; i++) {
