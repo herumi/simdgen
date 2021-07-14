@@ -155,8 +155,16 @@ uint32_t setAndGetIdxT(Vec& vec, const T& x)
 
 struct TokenList {
 	Index<std::string> varIdx;
-	IntVec f2uIdx;;
+	IntVec f2uIdx;
 	ValueVec vv;
+	int maxTmpN_;
+	static const size_t funcN = CYBOZU_NUM_OF_ARRAY(funcNameTbl);
+	bool usedFuncTbl_[funcN];
+	TokenList()
+		: maxTmpN_(0)
+		, usedFuncTbl_()
+	{
+	}
 	void appendFloat(float f)
 	{
 		Value v;
@@ -177,6 +185,7 @@ struct TokenList {
 		v.type = Func;
 		v.v = kind;
 		vv.push_back(v);
+		usedFuncTbl_[kind] = true;
 	}
 	void appendIdx(ValueType type, uint32_t idx)
 	{
@@ -284,6 +293,7 @@ struct TokenList {
 	template<class Generator>
 	void exec(Generator& gen) const
 	{
+		printf("#var=%zd #const=%zd #tmp=%d\n", varIdx.size(), f2uIdx.size(), maxTmpN_);
 		gen.gen_init();
 		setFloatConst(gen);
 		gen.allocVar(varIdx.size());
@@ -424,8 +434,10 @@ int getFuncKind(const std::string& str)
 */
 struct Parser {
 	const char *end_;
+	int nest_;
 	Parser()
 		: end_(0)
+		, nest_(0)
 	{
 	}
 	const char *skipSpace(const char *begin)
@@ -447,6 +459,8 @@ struct Parser {
 			if (next) {
 				uint32_t idx = tl.setFloatAndGetIdx(f);
 				tl.appendIdx(Float, idx);
+				nest_++;
+				if (nest_ > tl.maxTmpN_) tl.maxTmpN_ = nest_;
 				return next;
 			}
 		}
@@ -465,12 +479,16 @@ struct Parser {
 			if (next) {
 				uint32_t idx = tl.getVarIdx(str);
 				tl.appendIdx(Var, idx);
+				nest_++;
+				if (nest_ > tl.maxTmpN_) tl.maxTmpN_ = nest_;
 				return next;
 			}
 			char c = *begin;
 			if (c == '(') {
 				const char *next = parseAddSub(begin + 1, tl);
-				if (!isEnd(next) && *next == ')') return next + 1;
+				if (!isEnd(next) && *next == ')') {
+					return next + 1;
+				}
 				throw cybozu::Exception("bad parenthesis") << (isEnd(next) ? '_' : *next);
 			}
 		}
@@ -486,6 +504,7 @@ struct Parser {
 			if (c == '*' || c == '/') {
 				begin = parseTerm(begin + 1, tl);
 				tl.appendOp(c == '*' ? Mul : Div);
+				nest_--;
 				continue;
 			}
 			break;
@@ -502,6 +521,7 @@ struct Parser {
 			if (c == '+' || c == '-') {
 				begin = parseMulDiv(begin + 1, tl);
 				tl.appendOp(c == '+' ? Add : Sub);
+				nest_--;
 				continue;
 			}
 			break;
@@ -513,6 +533,8 @@ struct Parser {
 		const char *begin = str.c_str();
 		printf("src=%s\n", begin);
 		end_ = begin + str.size();
+		nest_ = 0;
+		tl.maxTmpN_ = 0;
 		begin = parseAddSub(begin, tl);
 		if (!isEnd(begin)) {
 			throw cybozu::Exception("extra string") << std::string(begin, end_);

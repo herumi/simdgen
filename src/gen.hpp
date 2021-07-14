@@ -8,16 +8,19 @@ namespace sg {
 typedef void FuncFloat1(float *dst, const float *src, size_t n);
 
 struct GeneratorBase {
+	/*
+		[0, varBegin_)       ; for const values
+		[varBegin_, varEnd_) ; for variables
+		[varEnd_, maxDst_]   ; for tmp reges
+	*/
 	int regNum_;
 	int varBegin_;
 	int varEnd_;
-	int maxDst_;
 	bool print_;
 	GeneratorBase()
 		: regNum_(0)
 		, varBegin_(0)
 		, varEnd_(0)
-		, maxDst_(0)
 		, print_(false)
 	{
 	}
@@ -41,50 +44,40 @@ struct GeneratorBase {
 	int getVarBeginIdx() const { return varBegin_; }
 	int getVarEndIdx() const { return varEnd_; }
 	int getCurReg() const { return regNum_; }
-	int getMaxDst() const { return maxDst_; }
-
 	virtual void gen_init()
 	{
 		if (print_) puts("init");
 	}
 	virtual void gen_setInt(int dst, uint32_t u)
 	{
-		if (dst > maxDst_) maxDst_ = dst;
 		if (print_) printf("setImm z%d, %08x\n", dst, u);
 	}
 	virtual void gen_loadVar(int dst, uint32_t u)
 	{
-		if (dst > maxDst_) maxDst_ = dst;
 		if (print_) printf("loadVar z%d, [%u]\n", dst, u);
 	}
 	virtual void gen_saveVar(uint32_t u, int src)
 	{
-		if (src > maxDst_) maxDst_ = src;
 		if (print_) printf("storeVar [%u], z%d\n", u, src);
 	}
 	virtual void gen_copy(int dst, int src)
 	{
-		if (dst > maxDst_) maxDst_ = dst;
 		if (print_) printf("copy z%d, z%d\n", dst, src);
 	}
 	virtual void gen_add(int dst, int src1, int src2)
 	{
-		if (dst > maxDst_) maxDst_ = dst;
 		if (print_) printf("add z%d, z%d, z%d\n", dst, src1, src2);
 	}
 	virtual void gen_sub(int dst, int src1, int src2)
 	{
-		if (dst > maxDst_) maxDst_ = dst;
 		if (print_) printf("sub z%d, z%d, z%d\n", dst, src1, src2);
 	}
 	virtual void gen_mul(int dst, int src1, int src2)
 	{
-		if (dst > maxDst_) maxDst_ = dst;
 		if (print_) printf("mul z%d, z%d, z%d\n", dst, src1, src2);
 	}
 	virtual void gen_div(int dst, int src1, int src2)
 	{
-		if (dst > maxDst_) maxDst_ = dst;
 		if (print_) printf("div z%d, z%d, z%d\n", dst, src1, src2);
 	}
 	virtual void gen_inv(int inout)

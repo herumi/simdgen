@@ -1,6 +1,8 @@
+#define CYBOZU_TEST_DISABLE_AUTO_RUN
 #include <cybozu/test.hpp>
 #include <cybozu/inttype.hpp>
 #include "parser.hpp"
+#include <iostream>
 
 CYBOZU_TEST_AUTO(parseFloat)
 {
@@ -86,6 +88,8 @@ CYBOZU_TEST_AUTO(parse)
 	tl.execPrinter();
 }
 
+std::string g_src;
+
 #ifdef SG_X64
 #include "x64/main.hpp"
 CYBOZU_TEST_AUTO(x64)
@@ -94,11 +98,11 @@ CYBOZU_TEST_AUTO(x64)
 	tl.appendVar("x");
 	sg::Parser parser;
 	const char *src = "x*2e3-3.1415";
+	if (!g_src.empty()) {
+		src = g_src.c_str();
+	}
 	parser.parse(tl, src);
 	sg::Generator gen;
-	sg::GeneratorBase gb;
-	tl.exec(gb);
-	printf("maxDst=%d\n", gb.getMaxDst());
 	tl.exec(gen);
 	float x[5] = { 1, 2, 3, 4, 5 };
 	float y[5];
@@ -108,4 +112,10 @@ CYBOZU_TEST_AUTO(x64)
 	}
 }
 #endif
+
+int main(int argc, char *argv[])
+{
+	if (argc > 1) g_src = argv[1];
+	return cybozu::test::autoRun.run(argc, argv);
+}
 
