@@ -1,22 +1,18 @@
 #pragma once
-#include <vector>
-#include <string>
 #include <simdgen/simdgen.h>
 #include <stdint.h>
 #include <stdio.h>
+#include "tokenlist.hpp"
 
 namespace sg {
-
-typedef std::vector<std::string> StrVec;
-typedef std::vector<uint32_t> IntVec;
 
 typedef void FuncFloat1(float *dst, const float *src, size_t n);
 
 struct GeneratorBase {
 	/*
-		[0, varBegin_)       ; for const values
+		[0, varBegin_) ; for const values
 		[varBegin_, varEnd_) ; for variables
-		[varEnd_, maxDst_]   ; for tmp reges
+		[varEnd_, tl.getTmpNum()] ; for tmp reges
 	*/
 	int regNum_;
 	int varBegin_;
@@ -124,10 +120,12 @@ struct GeneratorBase {
 		}
 		allocVar(varN);
 puts("execOneLoop");
+		// varN input
 		for (uint32_t i = 0; i < varN; i++) {
 			gen_loadVar(getVarBeginIdx() + i, i);
 		}
 		execOneLoop(tl);
+		// one output
 		gen_saveVar(0, getCurReg());
 		gen_end();
 	}
@@ -139,6 +137,50 @@ struct Printer : GeneratorBase {
 		print_ = true;
 	}
 };
+
+template<class TL>
+void GeneratorBase::execOneLoop(const TL& tl)
+{
+	const sg::ValueVec& vv = tl.getValueVec();
+	const size_t n = vv.size();
+	uint32_t pos = getCurReg();
+	for (size_t i = 0; i < n; i++) {
+		const Value& v = vv[i];
+		switch (v.type) {
+		case Var:
+			gen_copy(pos++, getVarBeginIdx() + v.v);
+			break;
+		case Float:
+			gen_copy(pos++, v.v);
+			break;
+		case Op:
+			assert(pos > 1);
+			pos--;
+			switch (v.v) {
+			case Add: gen_add(pos - 1, pos - 1, pos); break;
+			case Sub: gen_sub(pos - 1, pos - 1, pos); break;
+			case Mul: gen_mul(pos - 1, pos - 1, pos); break;
+			case Div: gen_div(pos - 1, pos - 1, pos); break;
+			default:
+				throw cybozu::Exception("bad op") << i << v.v;
+			}
+			break;
+		case Func:
+			assert(pos > 0);
+			switch (v.v) {
+			case Inv: gen_inv(pos - 1); break;
+			case Exp: gen_exp(pos - 1); break;
+			case Log: gen_log(pos - 1); break;
+			case Tanh: gen_tanh(pos - 1); break;
+			default:
+				throw cybozu::Exception("bad func") << i << v.v;
+			}
+			break;
+		default:
+			throw cybozu::Exception("bad type") << i << v.type;
+		}
+	}
+}
 
 
 } // sg
