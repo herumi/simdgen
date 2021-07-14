@@ -6,9 +6,6 @@
 	@license modified new BSD license
 	http://opensource.org/licenses/BSD-3-Clause
 */
-#include <string>
-#include <vector>
-#include <map>
 #include <memory>
 #include <iostream>
 #include <assert.h>
@@ -45,9 +42,6 @@ const char *funcNameTbl[] = {
 	"log",
 	"tanh",
 };
-
-typedef std::vector<std::string> StrVec;
-typedef std::vector<uint32_t> IntVec;
 
 template<class T>
 struct Index {
@@ -165,6 +159,10 @@ struct TokenList {
 		, usedFuncTbl_()
 	{
 	}
+	size_t getVarNum() const { return varIdx.size(); }
+	size_t getConstNum() const { return f2uIdx.size(); }
+	int getMaxTmpNum() const { return maxTmpN_; }
+	const ValueVec& getValueVec() const { return vv; }
 	void appendFloat(float f)
 	{
 		Value v;
@@ -206,6 +204,10 @@ struct TokenList {
 	{
 		return varIdx.getIdx(s);
 	}
+	uint32_t getConstVal(size_t idx) const
+	{
+		return f2uIdx[idx];
+	}
 	void putFloatIdx() const
 	{
 		for (uint32_t i = 0; i < f2uIdx.size(); i++) {
@@ -232,81 +234,6 @@ struct TokenList {
 		putFloatIdx();
 		printf("token ");
 		putValueVec();
-	}
-	template<class Generator>
-	void setFloatConst(Generator& gen) const
-	{
-		for (size_t i = 0; i < f2uIdx.size(); i++) {
-			uint32_t idx = gen.allocReg();
-			gen.gen_setInt(idx, f2uIdx[i]);
-		}
-	}
-	template<class Generator>
-	void loadVar(Generator& gen) const
-	{
-		for (uint32_t i = 0; i < varIdx.size(); i++) {
-			gen.gen_loadVar(gen.getVarBeginIdx() + i, i);
-		}
-	}
-	template<class Generator>
-	void execOneLoop(Generator& gen) const
-	{
-		const size_t n = vv.size();
-		uint32_t pos = gen.getCurReg();
-		for (size_t i = 0; i < n; i++) {
-			const Value& v = vv[i];
-			switch (v.type) {
-			case Var:
-				gen.gen_copy(pos++, gen.getVarBeginIdx() + v.v);
-				break;
-			case Float:
-				gen.gen_copy(pos++, v.v);
-				break;
-			case Op:
-				assert(pos > 1);
-				pos--;
-				switch (v.v) {
-				case Add: gen.gen_add(pos - 1, pos - 1, pos); break;
-				case Sub: gen.gen_sub(pos - 1, pos - 1, pos); break;
-				case Mul: gen.gen_mul(pos - 1, pos - 1, pos); break;
-				case Div: gen.gen_div(pos - 1, pos - 1, pos); break;
-				default:
-					throw cybozu::Exception("bad op") << i << v.v;
-				}
-				break;
-			case Func:
-				assert(pos > 0);
-				switch (v.v) {
-				case Inv: gen.gen_inv(pos - 1); break;
-				case Exp: gen.gen_exp(pos - 1); break;
-				case Log: gen.gen_log(pos - 1); break;
-				case Tanh: gen.gen_tanh(pos - 1); break;
-				default:
-					throw cybozu::Exception("bad func") << i << v.v;
-				}
-				break;
-			default:
-				throw cybozu::Exception("bad type") << i << v.type;
-			}
-		}
-	}
-	template<class Generator>
-	void exec(Generator& gen) const
-	{
-		printf("#var=%zd #const=%zd #tmp=%d\n", varIdx.size(), f2uIdx.size(), maxTmpN_);
-		gen.gen_init();
-		setFloatConst(gen);
-		gen.allocVar(varIdx.size());
-puts("execOneLoop");
-		loadVar(gen);
-		execOneLoop(gen);
-		gen.gen_saveVar(0, gen.getCurReg());
-		gen.gen_end();
-	}
-	void execPrinter() const
-	{
-		Printer printer;
-		exec(printer);
 	}
 };
 
@@ -541,6 +468,50 @@ struct Parser {
 		}
 	}
 };
+
+template<class TL>
+void GeneratorBase::execOneLoop(const TL& tl)
+{
+	const sg::ValueVec& vv = tl.getValueVec();
+	const size_t n = vv.size();
+	uint32_t pos = getCurReg();
+	for (size_t i = 0; i < n; i++) {
+		const Value& v = vv[i];
+		switch (v.type) {
+		case Var:
+			gen_copy(pos++, getVarBeginIdx() + v.v);
+			break;
+		case Float:
+			gen_copy(pos++, v.v);
+			break;
+		case Op:
+			assert(pos > 1);
+			pos--;
+			switch (v.v) {
+			case Add: gen_add(pos - 1, pos - 1, pos); break;
+			case Sub: gen_sub(pos - 1, pos - 1, pos); break;
+			case Mul: gen_mul(pos - 1, pos - 1, pos); break;
+			case Div: gen_div(pos - 1, pos - 1, pos); break;
+			default:
+				throw cybozu::Exception("bad op") << i << v.v;
+			}
+			break;
+		case Func:
+			assert(pos > 0);
+			switch (v.v) {
+			case Inv: gen_inv(pos - 1); break;
+			case Exp: gen_exp(pos - 1); break;
+			case Log: gen_log(pos - 1); break;
+			case Tanh: gen_tanh(pos - 1); break;
+			default:
+				throw cybozu::Exception("bad func") << i << v.v;
+			}
+			break;
+		default:
+			throw cybozu::Exception("bad type") << i << v.type;
+		}
+	}
+}
 
 } // sg
 

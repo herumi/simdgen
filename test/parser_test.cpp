@@ -84,8 +84,8 @@ CYBOZU_TEST_AUTO(parse)
 	const char *src = "x*2-3";
 	printf("src=%s\n", src);
 	parser.parse(tl, src);
-	tl.put();
-	tl.execPrinter();
+	sg::Printer printer;
+	printer.exec(tl);
 }
 
 std::string g_src;
@@ -103,7 +103,7 @@ CYBOZU_TEST_AUTO(x64)
 	}
 	parser.parse(tl, src);
 	sg::Generator gen;
-	tl.exec(gen);
+	gen.exec(tl);
 	float x[5] = { 1, 2, 3, 4, 5 };
 	float y[5];
 	gen.addr(y, x, 5);

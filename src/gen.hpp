@@ -1,9 +1,14 @@
 #pragma once
+#include <vector>
+#include <string>
 #include <simdgen/simdgen.h>
 #include <stdint.h>
 #include <stdio.h>
 
 namespace sg {
+
+typedef std::vector<std::string> StrVec;
+typedef std::vector<uint32_t> IntVec;
 
 typedef void FuncFloat1(float *dst, const float *src, size_t n);
 
@@ -99,6 +104,32 @@ struct GeneratorBase {
 	virtual void gen_end()
 	{
 		if (print_) puts("end");
+	}
+	template<class TL>
+	void execOneLoop(const TL& tl);
+
+	template<class TL>
+	void exec(const TL& tl)
+	{
+		const uint32_t varN = tl.getVarNum();
+		const uint32_t constN = tl.getConstNum();
+		const uint32_t tmpN = tl.getMaxTmpNum();
+		printf("#var=%d ", varN);
+		printf("#const=%d ", constN);
+		printf("#tmp=%d\n", tmpN);
+		gen_init();
+		for (uint32_t i = 0; i < constN; i++) {
+			uint32_t idx = allocReg();
+			gen_setInt(idx, tl.getConstVal(i));
+		}
+		allocVar(varN);
+puts("execOneLoop");
+		for (uint32_t i = 0; i < varN; i++) {
+			gen_loadVar(getVarBeginIdx() + i, i);
+		}
+		execOneLoop(tl);
+		gen_saveVar(0, getCurReg());
+		gen_end();
 	}
 };
 
