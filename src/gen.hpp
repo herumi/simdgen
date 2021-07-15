@@ -56,7 +56,7 @@ struct GeneratorBase {
 	{
 		const sg::ValueVec& vv = tl.getValueVec();
 		for (size_t i = 0; i < vv.size(); i++) {
-			if (vv[i].type == Float) {
+			if (vv[i].type == Const) {
 				constIdx_.append(vv[i].v);
 			} else if (vv[i].type == Var) {
 				varIdx_.append(vv[i].sv);
@@ -139,7 +139,7 @@ struct GeneratorBase {
 			case Var:
 				gen_copy(pos++, getVarBeginIdx() + varIdx_.getIdx(v.sv));
 				break;
-			case Float:
+			case Const:
 				gen_copy(pos++, constIdx_.getIdx(v.v));
 				break;
 			case Op:

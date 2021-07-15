@@ -20,7 +20,7 @@ typedef std::vector<uint32_t> IntVec;
 
 enum ValueType {
 	None,
-	Float,
+	Const,
 	Var,
 	Op,
 	Func,
@@ -112,7 +112,7 @@ struct Value {
 		switch (type) {
 		case None:
 			return "None";
-		case Float:
+		case Const:
 			snprintf(buf, sizeof(buf), "float{%f(0x%08x)}", u2f(v), v);
 			break;
 		case Var:
@@ -178,10 +178,10 @@ struct TokenList {
 			usedFuncTbl_[i] = false;
 		}
 	}
-	void appendFloat(float f)
+	void appendConst(float f)
 	{
 		Value v;
-		v.type = Float;
+		v.type = Const;
 		v.v = f2u(f);
 		vv.push_back(v);
 	}
