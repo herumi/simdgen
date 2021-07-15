@@ -38,6 +38,7 @@ enum FuncType {
 	Exp,
 	Log,
 	Tanh,
+	FuncEnd,
 };
 
 const char *funcNameTbl[] = {
@@ -170,6 +171,14 @@ struct TokenList {
 	{
 		if (x > maxTmpN_) maxTmpN_ = x;
 	}
+	void useFunc(int kind)
+	{
+		usedFuncTbl_[kind] = true;
+	}
+	bool isUsedFunc(int kind) const
+	{
+		return usedFuncTbl_[kind];
+	}
 	void clear()
 	{
 		maxTmpN_ = 0;
@@ -198,7 +207,7 @@ struct TokenList {
 		v.type = Func;
 		v.v = kind;
 		vv.push_back(v);
-		usedFuncTbl_[kind] = true;
+		useFunc(kind);
 	}
 	void appendIdx(ValueType type, uint32_t idx)
 	{

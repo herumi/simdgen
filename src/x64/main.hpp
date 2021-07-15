@@ -27,28 +27,55 @@ const int saveTbl[] = {
 
 static const size_t maxSaveN = sizeof(saveTbl)/sizeof(saveTbl[0]);
 
-struct UsedReg {
-	size_t pos;
-	UsedReg()
-		: pos(0)
+inline bool isKeepReg(uint32_t idx)
+{
+	return idx < maxFreeN;
+}
+
+inline uint32_t getKeepNum(uint32_t maxIdx)
+{
+	if (maxIdx < maxFreeN) return 0;
+	return maxIdx - maxFreeN;
+}
+
+struct LogGen {
+	int constN;
+	int tmpN;
+	int constIdx[5];
+	int tmpIdx[4];
+	LogGen()
+		: constN(3)
+		, tmpN(2)
 	{
 	}
-	int allocRegIdx()
+	void init(const sg::TokenList&)
 	{
-		if (pos < maxFreeN) {
-			return freeTbl[pos++];
+		// determin useConstNum, useTmpNum
+	}
+	uint32_t getConstNum() const
+	{
+		return constN;
+	}
+	uint32_t getTmpNum() const
+	{
+		return tmpN;
+	}
+	void prolog(GeneratorBase *gb)
+	{
+		for (int i = 0; i < constN; i++) {
+			constIdx[i] = gb->allocReg();
 		}
-		if (pos < maxFreeN + maxSaveN) {
-			return saveTbl[pos++ - maxFreeN];
+		for (int i = 0; i < tmpN; i++) {
+			tmpIdx[i] = gb->allocReg();
 		}
-		throw std::runtime_error("allocRegIdx");
+		// set gb
 	}
-	int getKeepNum() const
+	void main(GeneratorBase *gb, int inout) const
 	{
-		if (pos < maxFreeN) return 0;
-		return pos - maxFreeN;
+		(void)gb;
+		(void)inout;
+		// generate code for inout using constIdx, tmpN
 	}
-	size_t getPos() const { return pos; }
 };
 
 struct Env {
@@ -83,20 +110,27 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	{
 		setProtectModeRW();
 	}
-	void gen_init(const sg::TokenList& tl)
+	void gen_init(sg::TokenList& tl)
 	{
 		if (debug) puts("gen_init");
+		// append constVar to tl
+		for (uint32_t kind = 0; kind < sg::FuncEnd; kind++) {
+			if (tl.isUsedFunc(kind)) {
+				printf("used %s\n", sg::funcNameTbl[kind]);
+			}
+		}
 #if 0
 		Cpu cpu;
 		if (!cpu.has(Xbyak::util::Cpu::tAVX512F)) {
 			throw cybozu::Exception("AVX-512 is not supported");
 		}
 #endif
+		const uint32_t constN = tl.getConstNum();
+		const uint32_t varN = tl.getVarNum();
+//		uint32_t totalN = constN + varN;
 		setSize(dataSize);
 		addr = getCurr<FuncFloat1*>();
 		env.sf = new StackFrame(this, 3);
-		const uint32_t constN = tl.getConstNum();
-		const uint32_t varN = tl.getVarNum();
 		for (uint32_t i = 0; i < constN; i++) {
 			uint32_t idx = allocReg();
 			gen_setInt(idx, tl.getConstVal(i));
@@ -163,7 +197,8 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	}
 	void gen_log(int inout)
 	{
-		throw cybozu::Exception("not support gen_log") << inout;
+		printf("gen_log %d\n", inout);
+//		throw cybozu::Exception("not support gen_log") << inout;
 	}
 	void gen_tanh(int inout)
 	{
