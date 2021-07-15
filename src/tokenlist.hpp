@@ -63,10 +63,14 @@ struct Index {
 		if (doThrow) throw cybozu::Exception("getIdx") << s;
 		return -1;
 	}
-	void append(const T& s)
+	uint32_t append(const T& s)
 	{
 		int idx = getIdx(s, false);
-		if (idx < 0) tbl.push_back(s);
+		if (idx < 0) {
+			tbl.push_back(s);
+			idx = (int)tbl.size() - 1;
+		}
+		return idx;
 	}
 	void put() const
 	{
@@ -95,7 +99,8 @@ inline uint32_t f2u(float f)
 
 struct Value {
 	ValueType type;
-	uint32_t v;
+	uint32_t v; // if type != Var
+	std::string sv; // if type == Var
 	Value()
 		: type(None)
 		, v(0)
@@ -108,10 +113,10 @@ struct Value {
 		case None:
 			return "None";
 		case Float:
-			snprintf(buf, sizeof(buf), "float{%u}", v);
+			snprintf(buf, sizeof(buf), "float{%f(0x%08x)}", u2f(v), v);
 			break;
 		case Var:
-			snprintf(buf, sizeof(buf), "var{%u}", v);
+			snprintf(buf, sizeof(buf), "var{%s}", sv.c_str());
 			break;
 		case Op:
 			{
@@ -142,21 +147,7 @@ struct Value {
 
 typedef std::vector<Value> ValueVec;
 
-template<class Vec, class T>
-uint32_t setAndGetIdxT(Vec& vec, const T& x)
-{
-	const uint32_t n = vec.size();
-	for (uint32_t i = 0; i < n; i++) {
-		if (vec[i] == x) return i;
-	}
-	vec.push_back(x);
-	return n;
-}
-
 struct TokenList {
-	Index<std::string> varIdx;
-//	IntVec f2uIdx;
-	Index<uint32_t> constIdx;
 	ValueVec vv;
 	int maxTmpN_;
 	static const size_t funcN = CYBOZU_NUM_OF_ARRAY(funcNameTbl);
@@ -166,10 +157,8 @@ struct TokenList {
 		, usedFuncTbl_()
 	{
 	}
-	size_t getVarNum() const { return varIdx.size(); }
-	size_t getConstNum() const { return constIdx.size(); }
+	const ValueVec& getValueVec() const { return vv; }
 	int getMaxTmpNum() const { return maxTmpN_; }
-//	const IntVec& getIntVec() const { return f2uIdx;  }
 	void updateMaxTmpNum(int x)
 	{
 		if (x > maxTmpN_) maxTmpN_ = x;
@@ -189,12 +178,18 @@ struct TokenList {
 			usedFuncTbl_[i] = false;
 		}
 	}
-	const ValueVec& getValueVec() const { return vv; }
 	void appendFloat(float f)
 	{
 		Value v;
 		v.type = Float;
 		v.v = f2u(f);
+		vv.push_back(v);
+	}
+	void appendVar(const std::string& s)
+	{
+		Value v;
+		v.type = Var;
+		v.sv = s;
 		vv.push_back(v);
 	}
 	void appendOp(int kind)
@@ -212,39 +207,6 @@ struct TokenList {
 		vv.push_back(v);
 		useFunc(kind);
 	}
-	void appendIdx(ValueType type, uint32_t idx)
-	{
-		Value v;
-		v.type = type;
-		v.v = idx;
-		vv.push_back(v);
-	}
-	uint32_t setFloatAndGetIdx(float f)
-	{
-		uint32_t u = f2u(f);
-		constIdx.append(u);
-		return constIdx.getIdx(u);
-	}
-	void appendVar(const std::string& s)
-	{
-		varIdx.append(s);
-	}
-	uint32_t getVarIdx(const std::string& s)
-	{
-		return varIdx.getIdx(s);
-	}
-	uint32_t getConstVal(uint32_t u) const
-	{
-		return constIdx.getVal(u);
-	}
-	void putFloatIdx() const
-	{
-		constIdx.put();
-	}
-	void putVarIdx() const
-	{
-		varIdx.put();
-	}
 	void putValueVec() const
 	{
 		for (size_t i = 0; i < vv.size(); i++) {
@@ -254,10 +216,6 @@ struct TokenList {
 	}
 	void put() const
 	{
-		printf("varIdx ");
-		putVarIdx();
-		printf("floatIdx ");
-		putFloatIdx();
 		printf("token ");
 		putValueVec();
 	}

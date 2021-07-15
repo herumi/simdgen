@@ -128,15 +128,16 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			throw cybozu::Exception("AVX-512 is not supported");
 		}
 #endif
-		const uint32_t constN = tl.getConstNum();
-		const uint32_t varN = tl.getVarNum();
+		updateIdx(tl);
+		const uint32_t constN = constIdx_.size();
+		const uint32_t varN = varIdx_.size();
 //		uint32_t totalN = constN + varN;
 		setSize(dataSize);
 		addr = getCurr<FuncFloat1*>();
 		env.sf = new StackFrame(this, 3);
 		for (uint32_t i = 0; i < constN; i++) {
 			uint32_t idx = allocReg();
-			gen_setInt(idx, tl.getConstVal(i));
+			gen_setInt(idx, constIdx_.getVal(i));
 		}
 		allocVar(varN);
 		const Reg64& n = env.sf->p[2];

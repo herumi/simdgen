@@ -75,8 +75,9 @@ CYBOZU_TEST_AUTO(parse)
 		"y",
 		"z",
 	};
+	sg::Printer printer;
 	for (size_t i = 0; i < CYBOZU_NUM_OF_ARRAY(varTbl); i++) {
-		tl.appendVar(varTbl[i]);
+		printer.setVar(varTbl[i]);
 	}
 	sg::Parser parser;
 //	const char *src = "x + 1/(2 + exp(x / y)) -1.3 + 1/z";
@@ -84,7 +85,7 @@ CYBOZU_TEST_AUTO(parse)
 	const char *src = "x*2-3";
 	printf("src=%s\n", src);
 	parser.parse(tl, src);
-	sg::Printer printer;
+	tl.put();
 	printer.exec(tl);
 }
 
@@ -94,15 +95,15 @@ std::string g_src;
 #include "x64/main.hpp"
 CYBOZU_TEST_AUTO(x64)
 {
-	sg::TokenList tl;
-	tl.appendVar("x");
-	sg::Parser parser;
 	const char *src = "x*2e3-3.1415";
 	if (!g_src.empty()) {
 		src = g_src.c_str();
 	}
-	parser.parse(tl, src);
 	sg::Generator gen;
+	gen.setVar("x");
+	sg::Parser parser;
+	sg::TokenList tl;
+	parser.parse(tl, src);
 	gen.exec(tl);
 	float x[5] = { 1, 2, 3, 4, 5 };
 	float y[5];

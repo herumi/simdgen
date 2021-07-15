@@ -161,8 +161,9 @@ struct Parser {
 			float f;
 			const char *next = parseFloat(&f, begin, end_);
 			if (next) {
-				uint32_t idx = tl.setFloatAndGetIdx(f);
-				tl.appendIdx(Float, idx);
+//				uint32_t idx = tl.setFloatAndGetIdx(f);
+//				tl.appendIdx(Float, idx);
+				tl.appendFloat(f);
 				nest_++;
 				tl.updateMaxTmpNum(nest_);
 				return next;
@@ -181,8 +182,9 @@ struct Parser {
 				throw cybozu::Exception("bad func") << str;
 			}
 			if (next) {
-				uint32_t idx = tl.getVarIdx(str);
-				tl.appendIdx(Var, idx);
+//				uint32_t idx = tl.getVarIdx(str);
+//				tl.appendIdx(Var, idx);
+				tl.appendVar(str);
 				nest_++;
 				tl.updateMaxTmpNum(nest_);
 				return next;

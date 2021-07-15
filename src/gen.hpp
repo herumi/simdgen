@@ -9,6 +9,8 @@ namespace sg {
 typedef void FuncFloat1(float *dst, const float *src, size_t n);
 
 struct GeneratorBase {
+	Index<std::string> varIdx_;
+	Index<uint32_t> constIdx_;
 	/*
 		[0, varBegin_) ; for const values
 		[varBegin_, varEnd_) ; for variables
@@ -45,14 +47,31 @@ struct GeneratorBase {
 	int getVarBeginIdx() const { return varBegin_; }
 	int getVarEndIdx() const { return varEnd_; }
 	int getCurReg() const { return regNum_; }
+	// treat s as the index 0, 1, 2, ... accoring to the order to call setVar(s)
+	void setVar(const std::string& s)
+	{
+		varIdx_.append(s);
+	}
+	void updateIdx(const sg::TokenList& tl)
+	{
+		const sg::ValueVec& vv = tl.getValueVec();
+		for (size_t i = 0; i < vv.size(); i++) {
+			if (vv[i].type == Float) {
+				constIdx_.append(vv[i].v);
+			} else if (vv[i].type == Var) {
+				varIdx_.append(vv[i].sv);
+			}
+		}
+	}
 	virtual void gen_init(const sg::TokenList& tl)
 	{
 		if (print_) puts("init of GeneratorBase");
-		const uint32_t constN = tl.getConstNum();
-		const uint32_t varN = tl.getVarNum();
+		updateIdx(tl);
+		const uint32_t constN = constIdx_.size();
+		const uint32_t varN = varIdx_.size();
 		for (uint32_t i = 0; i < constN; i++) {
 			uint32_t idx = allocReg();
-			gen_setInt(idx, tl.getConstVal(i));
+			gen_setInt(idx, constIdx_.getVal(i));
 		}
 		allocVar(varN);
 	}
@@ -118,10 +137,10 @@ struct GeneratorBase {
 			const Value& v = vv[i];
 			switch (v.type) {
 			case Var:
-				gen_copy(pos++, getVarBeginIdx() + v.v);
+				gen_copy(pos++, getVarBeginIdx() + varIdx_.getIdx(v.sv));
 				break;
 			case Float:
-				gen_copy(pos++, v.v);
+				gen_copy(pos++, constIdx_.getIdx(v.v));
 				break;
 			case Op:
 				assert(pos > 1);
@@ -153,8 +172,8 @@ struct GeneratorBase {
 	}
 	void exec(const sg::TokenList& tl)
 	{
-		const uint32_t constN = tl.getConstNum();
-		const uint32_t varN = tl.getVarNum();
+		const uint32_t constN = constIdx_.size();
+		const uint32_t varN = varIdx_.size();
 		const uint32_t tmpN = tl.getMaxTmpNum();
 		printf("#var=%d ", varN);
 		printf("#const=%d ", constN);
