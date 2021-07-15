@@ -110,15 +110,18 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	{
 		setProtectModeRW();
 	}
-	void gen_init(sg::TokenList& tl)
+	void gen_init(const sg::TokenList& tl)
 	{
 		if (debug) puts("gen_init");
-		// append constVar to tl
+#if 0
+		sg::IntVec constIdx = tl.getIntVec();
+		// append constVar to constIdx
 		for (uint32_t kind = 0; kind < sg::FuncEnd; kind++) {
 			if (tl.isUsedFunc(kind)) {
 				printf("used %s\n", sg::funcNameTbl[kind]);
 			}
 		}
+#endif
 #if 0
 		Cpu cpu;
 		if (!cpu.has(Xbyak::util::Cpu::tAVX512F)) {

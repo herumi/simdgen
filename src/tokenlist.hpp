@@ -167,6 +167,7 @@ struct TokenList {
 	size_t getVarNum() const { return varIdx.size(); }
 	size_t getConstNum() const { return f2uIdx.size(); }
 	int getMaxTmpNum() const { return maxTmpN_; }
+	const IntVec& getIntVec() const { return f2uIdx;  }
 	void updateMaxTmpNum(int x)
 	{
 		if (x > maxTmpN_) maxTmpN_ = x;

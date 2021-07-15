@@ -45,7 +45,7 @@ struct GeneratorBase {
 	int getVarBeginIdx() const { return varBegin_; }
 	int getVarEndIdx() const { return varEnd_; }
 	int getCurReg() const { return regNum_; }
-	virtual void gen_init(sg::TokenList& tl)
+	virtual void gen_init(const sg::TokenList& tl)
 	{
 		if (print_) puts("init of GeneratorBase");
 		const uint32_t constN = tl.getConstNum();
@@ -151,7 +151,7 @@ struct GeneratorBase {
 			}
 		}
 	}
-	void exec(sg::TokenList& tl)
+	void exec(const sg::TokenList& tl)
 	{
 		const uint32_t constN = tl.getConstNum();
 		const uint32_t varN = tl.getVarNum();
