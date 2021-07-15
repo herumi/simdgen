@@ -75,6 +75,7 @@ struct Index {
 		}
 		std::cout << std::endl;
 	}
+	const T& getVal(uint32_t idx) const { return tbl[idx]; }
 	size_t size() const { return tbl.size(); }
 };
 
@@ -154,7 +155,8 @@ uint32_t setAndGetIdxT(Vec& vec, const T& x)
 
 struct TokenList {
 	Index<std::string> varIdx;
-	IntVec f2uIdx;
+//	IntVec f2uIdx;
+	Index<uint32_t> constIdx;
 	ValueVec vv;
 	int maxTmpN_;
 	static const size_t funcN = CYBOZU_NUM_OF_ARRAY(funcNameTbl);
@@ -165,9 +167,9 @@ struct TokenList {
 	{
 	}
 	size_t getVarNum() const { return varIdx.size(); }
-	size_t getConstNum() const { return f2uIdx.size(); }
+	size_t getConstNum() const { return constIdx.size(); }
 	int getMaxTmpNum() const { return maxTmpN_; }
-	const IntVec& getIntVec() const { return f2uIdx;  }
+//	const IntVec& getIntVec() const { return f2uIdx;  }
 	void updateMaxTmpNum(int x)
 	{
 		if (x > maxTmpN_) maxTmpN_ = x;
@@ -219,7 +221,9 @@ struct TokenList {
 	}
 	uint32_t setFloatAndGetIdx(float f)
 	{
-		return setAndGetIdxT(f2uIdx, f2u(f));
+		uint32_t u = f2u(f);
+		constIdx.append(u);
+		return constIdx.getIdx(u);
 	}
 	void appendVar(const std::string& s)
 	{
@@ -229,16 +233,13 @@ struct TokenList {
 	{
 		return varIdx.getIdx(s);
 	}
-	uint32_t getConstVal(size_t idx) const
+	uint32_t getConstVal(uint32_t u) const
 	{
-		return f2uIdx[idx];
+		return constIdx.getVal(u);
 	}
 	void putFloatIdx() const
 	{
-		for (uint32_t i = 0; i < f2uIdx.size(); i++) {
-			printf("%u:%f ", i, u2f(f2uIdx[i]));
-		}
-		printf("\n");
+		constIdx.put();
 	}
 	void putVarIdx() const
 	{
