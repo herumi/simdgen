@@ -161,8 +161,6 @@ struct Parser {
 			float f;
 			const char *next = parseFloat(&f, begin, end_);
 			if (next) {
-//				uint32_t idx = tl.setConstAndGetIdx(f);
-//				tl.appendIdx(Const, idx);
 				tl.appendConst(f);
 				nest_++;
 				tl.updateMaxTmpNum(nest_);

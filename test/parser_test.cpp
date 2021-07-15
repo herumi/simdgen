@@ -75,17 +75,17 @@ CYBOZU_TEST_AUTO(parse)
 		"y",
 		"z",
 	};
-	sg::Printer printer;
 	for (size_t i = 0; i < CYBOZU_NUM_OF_ARRAY(varTbl); i++) {
-		printer.setVar(varTbl[i]);
+		tl.setVar(varTbl[i]);
 	}
-	sg::Parser parser;
 //	const char *src = "x + 1/(2 + exp(x / y)) -1.3 + 1/z";
 //	const char *src = "log(exp(x)+tanh(y)*1.2)";
 	const char *src = "x*2-3";
 	printf("src=%s\n", src);
+	sg::Parser parser;
 	parser.parse(tl, src);
 	tl.put();
+	sg::Printer printer;
 	printer.exec(tl);
 }
 
@@ -99,11 +99,11 @@ CYBOZU_TEST_AUTO(x64)
 	if (!g_src.empty()) {
 		src = g_src.c_str();
 	}
-	sg::Generator gen;
-	gen.setVar("x");
-	sg::Parser parser;
 	sg::TokenList tl;
+	tl.setVar("x");
+	sg::Parser parser;
 	parser.parse(tl, src);
+	sg::Generator gen;
 	gen.exec(tl);
 	float x[5] = { 1, 2, 3, 4, 5 };
 	float y[5];

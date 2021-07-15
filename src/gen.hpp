@@ -9,7 +9,6 @@ namespace sg {
 typedef void FuncFloat1(float *dst, const float *src, size_t n);
 
 struct GeneratorBase {
-	Index<std::string> varIdx_;
 	Index<uint32_t> constIdx_;
 	/*
 		[0, varBegin_) ; for const values
@@ -47,19 +46,12 @@ struct GeneratorBase {
 	int getVarBeginIdx() const { return varBegin_; }
 	int getVarEndIdx() const { return varEnd_; }
 	int getCurReg() const { return regNum_; }
-	// treat s as the index 0, 1, 2, ... accoring to the order to call setVar(s)
-	void setVar(const std::string& s)
-	{
-		varIdx_.append(s);
-	}
 	void updateIdx(const sg::TokenList& tl)
 	{
 		const sg::ValueVec& vv = tl.getValueVec();
 		for (size_t i = 0; i < vv.size(); i++) {
 			if (vv[i].type == Const) {
 				constIdx_.append(vv[i].v);
-			} else if (vv[i].type == Var) {
-				varIdx_.append(vv[i].sv);
 			}
 		}
 	}
@@ -68,7 +60,7 @@ struct GeneratorBase {
 		if (print_) puts("init of GeneratorBase");
 		updateIdx(tl);
 		const uint32_t constN = constIdx_.size();
-		const uint32_t varN = varIdx_.size();
+		const uint32_t varN = tl.getVarNum();
 		for (uint32_t i = 0; i < constN; i++) {
 			uint32_t idx = allocReg();
 			gen_setInt(idx, constIdx_.getVal(i));
@@ -137,7 +129,7 @@ struct GeneratorBase {
 			const Value& v = vv[i];
 			switch (v.type) {
 			case Var:
-				gen_copy(pos++, getVarBeginIdx() + varIdx_.getIdx(v.sv));
+				gen_copy(pos++, getVarBeginIdx() + v.v);
 				break;
 			case Const:
 				gen_copy(pos++, constIdx_.getIdx(v.v));
@@ -173,7 +165,7 @@ struct GeneratorBase {
 	void exec(const sg::TokenList& tl)
 	{
 		const uint32_t constN = constIdx_.size();
-		const uint32_t varN = varIdx_.size();
+		const uint32_t varN = tl.getVarNum();
 		const uint32_t tmpN = tl.getMaxTmpNum();
 		printf("#var=%d ", varN);
 		printf("#const=%d ", constN);

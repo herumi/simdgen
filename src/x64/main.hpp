@@ -130,7 +130,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 #endif
 		updateIdx(tl);
 		const uint32_t constN = constIdx_.size();
-		const uint32_t varN = varIdx_.size();
+		const uint32_t varN = tl.getVarNum();
 //		uint32_t totalN = constN + varN;
 		setSize(dataSize);
 		addr = getCurr<FuncFloat1*>();

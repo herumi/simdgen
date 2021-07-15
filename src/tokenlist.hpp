@@ -99,8 +99,8 @@ inline uint32_t f2u(float f)
 
 struct Value {
 	ValueType type;
-	uint32_t v; // if type != Var
-	std::string sv; // if type == Var
+	// index if type == Var else value
+	uint32_t v;
 	Value()
 		: type(None)
 		, v(0)
@@ -116,7 +116,7 @@ struct Value {
 			snprintf(buf, sizeof(buf), "float{%f(0x%08x)}", u2f(v), v);
 			break;
 		case Var:
-			snprintf(buf, sizeof(buf), "var{%s}", sv.c_str());
+			snprintf(buf, sizeof(buf), "var{%d}", v);
 			break;
 		case Op:
 			{
@@ -148,6 +148,7 @@ struct Value {
 typedef std::vector<Value> ValueVec;
 
 struct TokenList {
+	Index<std::string> varIdx_;
 	ValueVec vv;
 	int maxTmpN_;
 	static const size_t funcN = CYBOZU_NUM_OF_ARRAY(funcNameTbl);
@@ -157,6 +158,12 @@ struct TokenList {
 		, usedFuncTbl_()
 	{
 	}
+	// treat s as the index 0, 1, 2, ... accoring to the order to call setVar(s)
+	void setVar(const std::string& s)
+	{
+		varIdx_.append(s);
+	}
+	size_t getVarNum() const { return varIdx_.size(); }
 	const ValueVec& getValueVec() const { return vv; }
 	int getMaxTmpNum() const { return maxTmpN_; }
 	void updateMaxTmpNum(int x)
@@ -189,7 +196,7 @@ struct TokenList {
 	{
 		Value v;
 		v.type = Var;
-		v.sv = s;
+		v.v = varIdx_.getIdx(s);
 		vv.push_back(v);
 	}
 	void appendOp(int kind)
@@ -216,6 +223,8 @@ struct TokenList {
 	}
 	void put() const
 	{
+		printf("var ");
+		varIdx_.put();
 		printf("token ");
 		putValueVec();
 	}
