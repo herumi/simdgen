@@ -8,26 +8,34 @@ namespace sg {
 
 typedef void FuncFloat1(float *dst, const float *src, size_t n);
 
+struct FuncInfo {
+	IntVec constTbl;
+	int regNum; // # of regs
+	FuncInfo()
+		: regNum(0)
+	{
+	}
+};
+
 struct GeneratorBase {
 	Index<uint32_t> constIdx_;
+	FuncInfo funcInfoTbl[FuncTypeN];
 	/*
+		index layout
 		[0, varBegin_) ; for const values
-		[varBegin_, varEnd_) ; for variables
-		[varEnd_, tl.getTmpNum()] ; for tmp reges
-
-		index
-		[constBegin_, varBegin_) ; for const values
 		[varBegin_, tmpBegin_) ; for variables
 		[tmpBegin_, tmpEnd_) ; for temporary variables
 	*/
 	int regNum_;
 	int varBegin_;
-	int varEnd_;
+	int tmpBegin_;
+	int tmpEnd_;
 	bool print_;
 	GeneratorBase()
 		: regNum_(0)
 		, varBegin_(0)
-		, varEnd_(0)
+		, tmpBegin_(0)
+		, tmpEnd_(0)
 		, print_(false)
 	{
 	}
@@ -41,13 +49,22 @@ struct GeneratorBase {
 	void allocVar(size_t n)
 	{
 		varBegin_ = regNum_;
-		varEnd_ = regNum_ + n;
+		tmpBegin_ = regNum_ + n;
+		tmpEnd_ = tmpBegin_;
+		regNum_ += n;
+	}
+	// used regs in functions
+	void allocTmp(size_t n)
+	{
+		tmpEnd_ = tmpBegin_ + n;
 		regNum_ += n;
 	}
 	int getVarBeginIdx() const { return varBegin_; }
-	int getVarEndIdx() const { return varEnd_; }
+	int getVarEndIdx() const { return tmpBegin_; }
+	int getTmpBeginIdx() const { return tmpBegin_; }
+	int getTmpEndIdx() const { return tmpEnd_; }
 	int getCurReg() const { return regNum_; }
-	void updateConstIdx(const sg::TokenList& tl)
+	int updateConstIdx(const sg::TokenList& tl)
 	{
 		const sg::ValueVec& vv = tl.getValueVec();
 		for (size_t i = 0; i < vv.size(); i++) {
@@ -55,35 +72,34 @@ struct GeneratorBase {
 				constIdx_.append(vv[i].v);
 			}
 		}
+		int maxTmpNum = 0;
+		// append const var in functions
 		for (int i = 0; i < sg::FuncTypeN; i++) {
-			const sg::IntVec& iv = getFuncConstTbl(i);
-			for (size_t j = 0; j < iv.size(); j++) {
-				constIdx_.append(iv[j]);
+			const FuncInfo& fi = funcInfoTbl[i];
+			const sg::IntVec& constTbl = fi.constTbl;
+			for (size_t j = 0; j < constTbl.size(); j++) {
+				constIdx_.append(constTbl[j]);
 			}
+			if (fi.regNum > maxTmpNum) maxTmpNum = fi.regNum;
 		}
+		return maxTmpNum;
 	}
-	virtual const sg::IntVec& getFuncConstTbl(int funcType) const
+	void gen_setConst()
 	{
-		(void)funcType;
-		static sg::IntVec empty;
-		return empty;
-	}
-	virtual int getFuncRegNum(int funcType) const
-	{
-		(void)funcType;
-		return 0;
-	}
-	virtual void gen_init(const sg::TokenList& tl)
-	{
-		if (print_) puts("init of GeneratorBase");
-		updateConstIdx(tl);
 		const uint32_t constN = constIdx_.size();
-		const uint32_t varN = tl.getVarNum();
 		for (uint32_t i = 0; i < constN; i++) {
 			uint32_t idx = allocReg();
 			gen_setInt(idx, constIdx_.getVal(i));
 		}
+	}
+	virtual void gen_init(const sg::TokenList& tl)
+	{
+		if (print_) puts("init of GeneratorBase");
+		int maxTmpNum = updateConstIdx(tl);
+		gen_setConst();
+		const uint32_t varN = tl.getVarNum();
 		allocVar(varN);
+		allocTmp(maxTmpNum);
 	}
 	virtual void gen_setInt(int dst, uint32_t u)
 	{

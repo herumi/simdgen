@@ -95,59 +95,47 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	Label lpL;
 	Label exitL;
 	bool debug;
-	sg::IntVec funcConstTbl[sg::FuncTypeN];
-	int funcRegNumTbl[sg::FuncTypeN];
 
 	Generator()
 		: CodeGenerator(sizeof(buf_), DontSetProtectRWE)
 		, env()
 		, addr(0)
 		, debug(true)
-		, funcRegNumTbl()
 	{
+		setFuncInfoTbl();
 	}
 	~Generator()
 	{
 		setProtectModeRW();
 	}
-	const sg::IntVec& getFuncConstTbl(int funcType) const
+	void setFuncInfoTbl()
 	{
-		return funcConstTbl[funcType];
-	}
-	int getFuncRegNum(int funcType) const
-	{
-		return funcRegNumTbl[funcType];
+		for (size_t i = 0; i < FuncTypeN; i++) {
+			if (i == Inv) {
+				puts("inv");
+			}
+		}
 	}
 	void gen_init(const sg::TokenList& tl)
 	{
 		if (debug) puts("gen_init");
-#if 0
-		sg::IntVec constIdx = tl.getIntVec();
-		// append constVar to constIdx
-		for (uint32_t kind = 0; kind < sg::FuncEnd; kind++) {
-			if (tl.isUsedFunc(kind)) {
-				printf("used %s\n", sg::funcNameTbl[kind]);
-			}
-		}
-#endif
 #if 0
 		Cpu cpu;
 		if (!cpu.has(Xbyak::util::Cpu::tAVX512F)) {
 			throw cybozu::Exception("AVX-512 is not supported");
 		}
 #endif
-		updateConstIdx(tl);
-		const uint32_t constN = constIdx_.size();
-		const uint32_t varN = tl.getVarNum();
-//		uint32_t totalN = constN + varN;
+		// setup constatns
+		int maxTmpNum = updateConstIdx(tl);
+		// start to generate code
 		setSize(dataSize);
 		addr = getCurr<FuncFloat1*>();
+		const uint32_t varN = tl.getVarNum();
+		printf("varN=%d, maxTmpNum=%d\n", varN, maxTmpNum);
 		env.sf = new StackFrame(this, 3);
-		for (uint32_t i = 0; i < constN; i++) {
-			uint32_t idx = allocReg();
-			gen_setInt(idx, constIdx_.getVal(i));
-		}
+		gen_setConst();
 		allocVar(varN);
+		allocTmp(maxTmpNum);
 		const Reg64& n = env.sf->p[2];
 		test(n, n);
 		jz(exitL, T_NEAR);
