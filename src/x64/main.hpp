@@ -56,10 +56,6 @@ struct LogGen {
 	{
 		return constN;
 	}
-	uint32_t getTmpNum() const
-	{
-		return tmpN;
-	}
 	void prolog(GeneratorBase *gb)
 	{
 		for (int i = 0; i < constN; i++) {
@@ -99,16 +95,28 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	Label lpL;
 	Label exitL;
 	bool debug;
+	sg::IntVec funcConstTbl[sg::FuncTypeN];
+	int funcRegNumTbl[sg::FuncTypeN];
+
 	Generator()
 		: CodeGenerator(sizeof(buf_), DontSetProtectRWE)
 		, env()
 		, addr(0)
 		, debug(true)
+		, funcRegNumTbl()
 	{
 	}
 	~Generator()
 	{
 		setProtectModeRW();
+	}
+	const sg::IntVec& getFuncConstTbl(int funcType) const
+	{
+		return funcConstTbl[funcType];
+	}
+	int getFuncRegNum(int funcType) const
+	{
+		return funcRegNumTbl[funcType];
 	}
 	void gen_init(const sg::TokenList& tl)
 	{
@@ -128,7 +136,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			throw cybozu::Exception("AVX-512 is not supported");
 		}
 #endif
-		updateIdx(tl);
+		updateConstIdx(tl);
 		const uint32_t constN = constIdx_.size();
 		const uint32_t varN = tl.getVarNum();
 //		uint32_t totalN = constN + varN;

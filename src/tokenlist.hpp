@@ -24,6 +24,7 @@ enum ValueType {
 	Var,
 	Op,
 	Func,
+	ValueTypeN
 };
 
 enum OpType {
@@ -31,6 +32,7 @@ enum OpType {
 	Sub,
 	Mul,
 	Div,
+	OpTypeN
 };
 
 enum FuncType {
@@ -38,7 +40,7 @@ enum FuncType {
 	Exp,
 	Log,
 	Tanh,
-	FuncEnd,
+	FuncTypeN
 };
 
 const char *funcNameTbl[] = {
@@ -136,6 +138,8 @@ struct Value {
 				throw cybozu::Exception("bad Func") << v;
 			}
 			return funcNameTbl[v];
+		default:
+			throw cybozu::Exception("bad type") << type;
 		}
 		return buf;
 	}

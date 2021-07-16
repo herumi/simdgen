@@ -14,6 +14,11 @@ struct GeneratorBase {
 		[0, varBegin_) ; for const values
 		[varBegin_, varEnd_) ; for variables
 		[varEnd_, tl.getTmpNum()] ; for tmp reges
+
+		index
+		[constBegin_, varBegin_) ; for const values
+		[varBegin_, tmpBegin_) ; for variables
+		[tmpBegin_, tmpEnd_) ; for temporary variables
 	*/
 	int regNum_;
 	int varBegin_;
@@ -29,10 +34,6 @@ struct GeneratorBase {
 	virtual ~GeneratorBase()
 	{
 	}
-	virtual void reset()
-	{
-		regNum_ = 0;
-	}
 	int allocReg()
 	{
 		return regNum_++;
@@ -46,7 +47,7 @@ struct GeneratorBase {
 	int getVarBeginIdx() const { return varBegin_; }
 	int getVarEndIdx() const { return varEnd_; }
 	int getCurReg() const { return regNum_; }
-	void updateIdx(const sg::TokenList& tl)
+	void updateConstIdx(const sg::TokenList& tl)
 	{
 		const sg::ValueVec& vv = tl.getValueVec();
 		for (size_t i = 0; i < vv.size(); i++) {
@@ -54,11 +55,28 @@ struct GeneratorBase {
 				constIdx_.append(vv[i].v);
 			}
 		}
+		for (int i = 0; i < sg::FuncTypeN; i++) {
+			const sg::IntVec& iv = getFuncConstTbl(i);
+			for (size_t j = 0; j < iv.size(); j++) {
+				constIdx_.append(iv[j]);
+			}
+		}
+	}
+	virtual const sg::IntVec& getFuncConstTbl(int funcType) const
+	{
+		(void)funcType;
+		static sg::IntVec empty;
+		return empty;
+	}
+	virtual int getFuncRegNum(int funcType) const
+	{
+		(void)funcType;
+		return 0;
 	}
 	virtual void gen_init(const sg::TokenList& tl)
 	{
 		if (print_) puts("init of GeneratorBase");
-		updateIdx(tl);
+		updateConstIdx(tl);
 		const uint32_t constN = constIdx_.size();
 		const uint32_t varN = tl.getVarNum();
 		for (uint32_t i = 0; i < constN; i++) {
