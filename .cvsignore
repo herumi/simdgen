@@ -1,0 +1,7 @@
+.git
+.gitignore
+.gitmodules
+.cvsignore
+obj/*.d
+bin
+lib

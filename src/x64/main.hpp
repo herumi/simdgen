@@ -38,6 +38,7 @@ inline uint32_t getKeepNum(uint32_t maxIdx)
 	return maxIdx - maxFreeN;
 }
 
+#if 0
 struct LogGen {
 	int constN;
 	int tmpN;
@@ -56,16 +57,6 @@ struct LogGen {
 	{
 		return constN;
 	}
-	void prolog(GeneratorBase *gb)
-	{
-		for (int i = 0; i < constN; i++) {
-			constIdx[i] = gb->allocReg();
-		}
-		for (int i = 0; i < tmpN; i++) {
-			tmpIdx[i] = gb->allocReg();
-		}
-		// set gb
-	}
 	void main(GeneratorBase *gb, int inout) const
 	{
 		(void)gb;
@@ -73,6 +64,7 @@ struct LogGen {
 		// generate code for inout using constIdx, tmpN
 	}
 };
+#endif
 
 struct Env {
 	StackFrame *sf;
@@ -94,12 +86,14 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	FuncFloat1 *addr;
 	Label lpL;
 	Label exitL;
+	int simdByte_;
 	bool debug;
 
 	Generator()
 		: CodeGenerator(sizeof(buf_), DontSetProtectRWE)
 		, env()
 		, addr(0)
+		, simdByte_(32)
 		, debug(true)
 	{
 		setFuncInfoTbl();
@@ -111,8 +105,10 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	void setFuncInfoTbl()
 	{
 		for (size_t i = 0; i < FuncTypeN; i++) {
+			FuncInfo& fi = funcInfoTbl[i];
 			if (i == Inv) {
-				puts("inv");
+				fi.constTbl.push_back(u2f(1.0));
+				fi.tmpN = 1;
 			}
 		}
 	}
@@ -126,16 +122,18 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		}
 #endif
 		// setup constatns
-		int maxTmpNum = updateConstIdx(tl);
+		updateConstIdx(tl);
 		// start to generate code
 		setSize(dataSize);
 		addr = getCurr<FuncFloat1*>();
-		const uint32_t varN = tl.getVarNum();
-		printf("varN=%d, maxTmpNum=%d\n", varN, maxTmpNum);
-		env.sf = new StackFrame(this, 3);
+		uint32_t totalN = getTotalNum();
+		int keepN = getKeepNum(totalN);
+		printf("keepN=%d\n", keepN);
+		env.sf = new StackFrame(this, 3, keepN * simdByte_);
+		for (int i = 0; i < keepN; i++) {
+			vmovups(ptr[rsp + i * simdByte_], Ymm(saveTbl[i]));
+		}
 		gen_setConst();
-		allocVar(varN);
-		allocTmp(maxTmpNum);
 		const Reg64& n = env.sf->p[2];
 		test(n, n);
 		jz(exitL, T_NEAR);
@@ -212,6 +210,11 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		sub(env.sf->p[2], 1);
 		jnz(lpL, T_NEAR);
 	L(exitL);
+		uint32_t totalN = getTotalNum();
+		int keepN = getKeepNum(totalN);
+		for (int i = 0; i < keepN; i++) {
+			vmovups(Ymm(saveTbl[i]), ptr[rsp + i * simdByte_]);
+		}
 		env.sf->close();
 		setProtectModeRE();
 	}

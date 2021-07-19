@@ -163,7 +163,7 @@ struct Parser {
 			if (next) {
 				tl.appendConst(f);
 				nest_++;
-				tl.updateMaxTmpNum(nest_);
+				tl.updateMaxRegStackNum(nest_);
 				return next;
 			}
 		}
@@ -184,7 +184,7 @@ struct Parser {
 //				tl.appendIdx(Var, idx);
 				tl.appendVar(str);
 				nest_++;
-				tl.updateMaxTmpNum(nest_);
+				tl.updateMaxRegStackNum(nest_);
 				return next;
 			}
 			char c = *begin;

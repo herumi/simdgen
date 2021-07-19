@@ -154,11 +154,11 @@ typedef std::vector<Value> ValueVec;
 struct TokenList {
 	Index<std::string> varIdx_;
 	ValueVec vv;
-	int maxTmpN_;
+	int maxRegStackN_;
 	static const size_t funcN = CYBOZU_NUM_OF_ARRAY(funcNameTbl);
 	bool usedFuncTbl_[funcN];
 	TokenList()
-		: maxTmpN_(0)
+		: maxRegStackN_(0)
 		, usedFuncTbl_()
 	{
 	}
@@ -169,10 +169,10 @@ struct TokenList {
 	}
 	size_t getVarNum() const { return varIdx_.size(); }
 	const ValueVec& getValueVec() const { return vv; }
-	int getMaxTmpNum() const { return maxTmpN_; }
-	void updateMaxTmpNum(int x)
+	int getMaxTmpNum() const { return maxRegStackN_; }
+	void updateMaxRegStackNum(int x)
 	{
-		if (x > maxTmpN_) maxTmpN_ = x;
+		if (x > maxRegStackN_) maxRegStackN_ = x;
 	}
 	void useFunc(int kind)
 	{
@@ -184,7 +184,7 @@ struct TokenList {
 	}
 	void clear()
 	{
-		maxTmpN_ = 0;
+		maxRegStackN_ = 0;
 		for (size_t i = 0; i < funcN; i++) {
 			usedFuncTbl_[i] = false;
 		}
