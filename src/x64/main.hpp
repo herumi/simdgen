@@ -107,7 +107,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		for (size_t i = 0; i < FuncTypeN; i++) {
 			FuncInfo& fi = funcInfoTbl[i];
 			if (i == Inv) {
-				fi.constTbl.push_back(u2f(1.0));
+				fi.constTbl.push_back(f2u(1.0));
 				fi.tmpN = 1;
 			}
 		}
@@ -187,7 +187,9 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	}
 	void gen_inv(int inout)
 	{
-		throw cybozu::Exception("not support gen_inv") << inout;
+		if (debug) printf("inv z%d\n", inout);
+		vdivss(Xmm(inout), Xmm(getConstIdx(f2u(1.0))), Xmm(inout));
+//		throw cybozu::Exception("not support gen_inv") << inout;
 	}
 	void gen_exp(int inout)
 	{

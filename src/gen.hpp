@@ -41,6 +41,11 @@ struct GeneratorBase {
 	uint32_t getFuncTmpOffset() const { return varN_ + constN_; }
 	uint32_t getTmpOffset() const { return varN_ + constN_ + maxFuncTmpN_; }
 	uint32_t getTotalNum() const { return getTmpOffset() + maxTmpN_; }
+
+	uint32_t getConstIdx(uint32_t u) const
+	{
+		return getConstIdxOffset() + constIdx_.getIdx(u);
+	}
 	void updateConstIdx(const sg::TokenList& tl)
 	{
 		const sg::ValueVec& vv = tl.getValueVec();
