@@ -84,8 +84,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	MIE_ALIGN(4096) uint8_t buf_[dataSize + codeSize];
 	Env env;
 	FuncFloat1 *addr_;
-	Label lpL;
-	Label exitL;
 	int totalN_;
 	int keepN_;
 	bool debug;
@@ -116,9 +114,9 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			}
 		}
 	}
-	void gen_init(const sg::TokenList& tl)
+	void exec(const sg::TokenList& tl)
 	{
-		if (debug) puts("gen_init");
+		if (debug) puts("x64/exec");
 #if 1
 		Cpu cpu;
 		if (!cpu.has(Xbyak::util::Cpu::tAVX512F)) {
@@ -140,8 +138,24 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		gen_setConst();
 		const Reg64& n = env.sf->p[2];
 		test(n, n);
+		Label lpL, exitL;
 		jz(exitL, T_NEAR);
 	L(lpL);
+		for (uint32_t i = 0; i < varN_; i++) {
+			vmovss(Xmm(getVarIdx(0)), ptr[env.sf->p[1]]);
+		}
+		execOneLoop(tl);
+		vmovss(ptr[env.sf->p[0]], Xmm(getTmpIdx(0)));
+		add(env.sf->p[1], 4);
+		add(env.sf->p[0], 4);
+		sub(env.sf->p[2], 1);
+		jnz(lpL, T_NEAR);
+	L(exitL);
+		for (int i = 0; i < keepN_; i++) {
+			vmovups(Zmm(saveTbl[i]), ptr[rsp + i * simdByte_]);
+		}
+		env.sf->close();
+		setProtectModeRE();
 	}
 	void gen_setInt(int dst, uint32_t u)
 	{
@@ -207,20 +221,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	void gen_tanh(int inout)
 	{
 		throw cybozu::Exception("not support gen_tanh") << inout;
-	}
-	void gen_end()
-	{
-		if (debug) puts("gen_end");
-		add(env.sf->p[1], 4);
-		add(env.sf->p[0], 4);
-		sub(env.sf->p[2], 1);
-		jnz(lpL, T_NEAR);
-	L(exitL);
-		for (int i = 0; i < keepN_; i++) {
-			vmovups(Zmm(saveTbl[i]), ptr[rsp + i * simdByte_]);
-		}
-		env.sf->close();
-		setProtectModeRE();
 	}
 };
 

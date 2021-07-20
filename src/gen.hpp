@@ -38,10 +38,12 @@ struct GeneratorBase {
 	virtual ~GeneratorBase()
 	{
 	}
-	uint32_t getVarIdxOffset() const { return 0; }
+	int getVarIdxOffset() const { return 0; }
+	int getVarIdx(int i) const { return getVarIdxOffset() + i; }
 	uint32_t getConstIdxOffset() const { return varN_; }
 	uint32_t getFuncTmpOffset() const { return varN_ + constN_; }
 	uint32_t getTmpOffset() const { return varN_ + constN_ + maxFuncTmpN_; }
+	int getTmpIdx(int i) const { return getTmpOffset() + i; }
 	uint32_t getTotalNum() const { return getTmpOffset() + maxTmpN_; }
 
 	uint32_t getConstIdx(uint32_t u) const
@@ -81,11 +83,19 @@ struct GeneratorBase {
 			gen_setInt(getConstIdxOffset() + i, constIdx_.getVal(i));
 		}
 	}
-	virtual void gen_init(const sg::TokenList& tl)
+	virtual void exec(const sg::TokenList& tl)
 	{
 		if (print_) puts("init of GeneratorBase");
 		updateConstIdx(tl);
 		gen_setConst();
+		puts("execOneLoop");
+		for (uint32_t i = 0; i < varN_; i++) {
+			gen_loadVar(getVarIdx(i), i);
+		}
+		execOneLoop(tl);
+		// one output
+		gen_saveVar(0, getTmpOffset());
+		gen_end();
 	}
 	virtual void gen_setInt(int dst, uint32_t u)
 	{
@@ -181,20 +191,6 @@ struct GeneratorBase {
 				throw cybozu::Exception("bad type") << i << v.type;
 			}
 		}
-	}
-	void exec(const sg::TokenList& tl)
-	{
-		const uint32_t varN = tl.getVarNum();
-		gen_init(tl);
-		puts("execOneLoop");
-		// varN input
-		for (uint32_t i = 0; i < varN; i++) {
-			gen_loadVar(getVarIdxOffset() + i, i);
-		}
-		execOneLoop(tl);
-		// one output
-		gen_saveVar(0, getTmpOffset());
-		gen_end();
 	}
 };
 
