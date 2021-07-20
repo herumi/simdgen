@@ -74,6 +74,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	Label dataL_;
 	int totalN_;
 	int keepN_;
+	Reg64 dataReg_;
 	bool debug;
 
 	Generator()
@@ -81,6 +82,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		, addr_(0)
 		, totalN_(0)
 		, keepN_(0)
+		, dataReg_(rax)
 		, debug(true)
 	{
 		simdByte_ = 512 / 8;
@@ -118,15 +120,18 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		setSize(dataSize);
 		addr_ = getCurr<FuncFloat1*>();
 		{
-			StackFrame sf(this, 3, UseRCX, keepN_ * simdByte_);
+			StackFrame sf(this, 3, 1 | UseRCX, keepN_ * simdByte_);
 			// store regs
 			for (int i = 0; i < keepN_; i++) {
 				vmovups(ptr[rsp + i * simdByte_], Zmm(saveTbl[i]));
 			}
-			gen_setConst();
 			const Reg64& dst = sf.p[0];
 			const Reg64& src = sf.p[1];
 			const Reg64& n = sf.p[2];
+printf("sf.t[0]=%s\n", sf.t[0].toString());
+			dataReg_ = sf.t[0];
+			mov(dataReg_, (size_t)dataL.getAddress());
+			gen_setConst();
 			test(n, n);
 			Label mod16, exit;
 			mov(ecx, n);
@@ -167,8 +172,11 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			printf("mov eax, 0x%08x\n", u);
 			printf("vpbroadcastd z%d, eax\n", dst);
 		}
-		mov(eax, u);
-		vpbroadcastd(Zmm(dst), eax);
+//		mov(eax, u);
+//		vpbroadcastd(Zmm(dst), eax);
+		printf("idx=%d(%08x)\n", constIdx_.getIdx(u), u);
+		printf("dataReg_=%s\n", dataReg_.toString());
+		vbroadcastss(Zmm(dst), ptr[dataReg_ + constIdx_.getIdx(u) * 4]);
 	}
 	void gen_copy(int dst, int src)
 	{

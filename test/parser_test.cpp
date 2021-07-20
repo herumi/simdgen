@@ -113,8 +113,10 @@ CYBOZU_TEST_AUTO(x64)
 	}
 	addr(y, x, N);
 	for (size_t i = 0; i < N; i++) {
-		printf("%zd %f %f\n", i, x[i], y[i]);
+		printf("%5.3f ", y[i]);
+		if (((i + 1) % 8) == 0) putchar('\n');
 	}
+	printf("\n");
 }
 #endif
 
