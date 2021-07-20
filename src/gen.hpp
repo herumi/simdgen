@@ -42,6 +42,7 @@ struct GeneratorBase {
 	int getVarIdx(int i) const { return getVarIdxOffset() + i; }
 	uint32_t getConstIdxOffset() const { return varN_; }
 	uint32_t getFuncTmpOffset() const { return varN_ + constN_; }
+	int getFuncTmpIdx(int i) const { return getFuncTmpOffset() + i; }
 	uint32_t getTmpOffset() const { return varN_ + constN_ + maxFuncTmpN_; }
 	int getTmpIdx(int i) const { return getTmpOffset() + i; }
 	uint32_t getTotalNum() const { return getTmpOffset() + maxTmpN_; }
@@ -49,6 +50,10 @@ struct GeneratorBase {
 	uint32_t getConstIdx(uint32_t u) const
 	{
 		return getConstIdxOffset() + constIdx_.getIdx(u);
+	}
+	int getFloatIdx(float f) const
+	{
+		return getConstIdx(f2u(f));
 	}
 	void updateConstIdx(const sg::TokenList& tl)
 	{

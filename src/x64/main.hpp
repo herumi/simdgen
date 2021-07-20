@@ -3,6 +3,7 @@
 #include <xbyak/xbyak_util.h>
 #include <simdgen/simdgen.h>
 #include <cybozu/exception.hpp>
+#include <cmath>
 
 using namespace Xbyak;
 using namespace Xbyak::util;
@@ -38,33 +39,28 @@ inline uint32_t getKeepNum(uint32_t maxIdx)
 	return maxIdx - maxFreeN;
 }
 
-#if 0
-struct LogGen {
-	int constN;
-	int tmpN;
-	int constIdx[5];
-	int tmpIdx[4];
-	LogGen()
-		: constN(3)
-		, tmpN(2)
+struct ExpTbl {
+	static const int N = 5;
+	float log2;
+	float log2_e;
+	float coef[N];
+	static const int tmpN = 2;
+	ExpTbl()
+		: log2(std::log(2.0f))
+		, log2_e(1.0f / log2)
 	{
+		const uint32_t tbl[N] = {
+			0x3f800000,
+			0x3effff12,
+			0x3e2aaa56,
+			0x3d2b89cc,
+			0x3c091331,
+		};
+		for (int i = 0; i < N; i++) {
+			coef[i] = u2f(tbl[i]);
+		}
 	}
-	void init(const sg::TokenList&)
-	{
-		// determin useConstNum, useTmpNum
-	}
-	uint32_t getConstNum() const
-	{
-		return constN;
-	}
-	void main(GeneratorBase *gb, int inout) const
-	{
-		(void)gb;
-		(void)inout;
-		// generate code for inout using constIdx, tmpN
-	}
-};
-#endif
+} g_expTbl;
 
 struct Generator : CodeGenerator, sg::GeneratorBase {
 	static const size_t dataSize = 4096;
@@ -97,9 +93,21 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	{
 		for (size_t i = 0; i < FuncTypeN; i++) {
 			FuncInfo& fi = funcInfoTbl[i];
-			if (i == Inv) {
+			switch (i) {
+			case Inv:
 				fi.constTbl.push_back(f2u(1.0));
 				fi.tmpN = 1;
+				break;
+			case Exp:
+				fi.constTbl.push_back(f2u(g_expTbl.log2));
+				fi.constTbl.push_back(f2u(g_expTbl.log2_e));
+				for (int j = 0; j < ExpTbl::N; j++) {
+					fi.constTbl.push_back(f2u(g_expTbl.coef[j]));
+				}
+				fi.tmpN = ExpTbl::tmpN;
+				break;
+			default:
+				break;
 			}
 		}
 	}
@@ -128,7 +136,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			const Reg64& dst = sf.p[0];
 			const Reg64& src = sf.p[1];
 			const Reg64& n = sf.p[2];
-printf("sf.t[0]=%s\n", sf.t[0].toString());
 			dataReg_ = sf.t[0];
 			mov(dataReg_, (size_t)dataL.getAddress());
 			gen_setConst();
@@ -174,8 +181,6 @@ printf("sf.t[0]=%s\n", sf.t[0].toString());
 		}
 //		mov(eax, u);
 //		vpbroadcastd(Zmm(dst), eax);
-		printf("idx=%d(%08x)\n", constIdx_.getIdx(u), u);
-		printf("dataReg_=%s\n", dataReg_.toString());
 		vbroadcastss(Zmm(dst), ptr[dataReg_ + constIdx_.getIdx(u) * 4]);
 	}
 	void gen_copy(int dst, int src)
@@ -210,7 +215,31 @@ printf("sf.t[0]=%s\n", sf.t[0].toString());
 	}
 	void gen_exp(int inout)
 	{
-		throw cybozu::Exception("not support gen_exp") << inout;
+		if (debug) printf("exp z%d\n", inout);
+		const Zmm log2 = Zmm(getFloatIdx(g_expTbl.log2));
+		const Zmm log2_e = Zmm(getFloatIdx(g_expTbl.log2_e));
+		const Zmm tbl[] = {
+			Zmm(getFloatIdx(g_expTbl.coef[0])),
+			Zmm(getFloatIdx(g_expTbl.coef[1])),
+			Zmm(getFloatIdx(g_expTbl.coef[2])),
+			Zmm(getFloatIdx(g_expTbl.coef[3])),
+			Zmm(getFloatIdx(g_expTbl.coef[4])),
+		};
+		const Zmm t0 = Zmm(inout);
+		const Zmm t1 = Zmm(getFuncTmpIdx(0));
+		const Zmm t2 = Zmm(getFuncTmpIdx(1));
+
+		vmulps(t0, log2_e);
+		vrndscaleps(t1, t0, 0); // n = round(x)
+		vsubps(t0, t1); // a
+		vmulps(t0, log2);
+		vmovaps(t2, tbl[4]);
+		vfmadd213ps(t2, t0, tbl[3]);
+		vfmadd213ps(t2, t0, tbl[2]);
+		vfmadd213ps(t2, t0, tbl[1]);
+		vfmadd213ps(t2, t0, tbl[0]);
+		vfmadd213ps(t2, t0, tbl[0]);
+		vscalefps(t0, t2, t1); // t2 * 2^t1
 	}
 	void gen_log(int inout)
 	{
