@@ -100,6 +100,7 @@ TEST_SRC=parser_test.cpp
 LIB_OBJ=$(OBJ_DIR)/main.o
 ifeq ($(CPU),x86-64)
   MCL_USE_XBYAK?=1
+  CFLAGS+=-I src/x64
 endif
 
 ifeq ($(XBYAK),1)

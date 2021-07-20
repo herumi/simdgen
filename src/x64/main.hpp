@@ -131,7 +131,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			Label mod16, exit;
 			mov(ecx, n);
 			and_(n, ~15u);
-			jz(mod16);
+			jz(mod16, T_NEAR);
 			puts("execOneLoop lp");
 		Label lp = L();
 			vmovups(Zmm(getVarIdx(0)), ptr[src]);
@@ -151,7 +151,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			kmovd(k1, eax);
 			vmovups(Zmm(getVarIdx(0))|k1|T_z, ptr[src]);
 			execOneLoop(tl);
-			vmovups(ptr[dst]|k1, Zmm(getTmpIdx(0))|k1);
+			vmovups(ptr[dst]|k1, Zmm(getTmpIdx(0)));
 		L(exit);
 			// restore regs
 			for (int i = 0; i < keepN_; i++) {
@@ -199,7 +199,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	{
 		if (debug) printf("inv z%d\n", inout);
 		vdivps(Zmm(inout), Zmm(getConstIdx(f2u(1.0))), Zmm(inout));
-//		throw cybozu::Exception("not support gen_inv") << inout;
 	}
 	void gen_exp(int inout)
 	{
