@@ -105,11 +105,14 @@ CYBOZU_TEST_AUTO(x64)
 	parser.parse(tl, src);
 	sg::Generator gen;
 	gen.exec(tl);
-	float x[5] = { 1, 2, 3, 4, 5 };
-	float y[5];
+	const size_t N = 40;
+	float x[N], y[N];
 	const sg::FuncFloat1* addr = gen.getAddrFloat1();
-	addr(y, x, 5);
-	for (size_t i = 0; i < 5; i++) {
+	for (size_t i = 0; i < N; i++) {
+		x[i] = i;
+	}
+	addr(y, x, N);
+	for (size_t i = 0; i < N; i++) {
 		printf("%zd %f %f\n", i, x[i], y[i]);
 	}
 }

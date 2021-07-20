@@ -66,31 +66,18 @@ struct LogGen {
 };
 #endif
 
-struct Env {
-	StackFrame *sf;
-	Env()
-		: sf(0)
-	{
-	}
-	~Env()
-	{
-		delete sf;
-	}
-};
-
 struct Generator : CodeGenerator, sg::GeneratorBase {
 	static const size_t dataSize = 4096;
 	static const size_t codeSize = 8192;
 	MIE_ALIGN(4096) uint8_t buf_[dataSize + codeSize];
-	Env env;
 	FuncFloat1 *addr_;
+	Label dataL_;
 	int totalN_;
 	int keepN_;
 	bool debug;
 
 	Generator()
 		: CodeGenerator(sizeof(buf_), DontSetProtectRWE)
-		, env()
 		, addr_(0)
 		, totalN_(0)
 		, keepN_(0)
@@ -123,84 +110,89 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			throw cybozu::Exception("AVX-512 is not supported");
 		}
 #endif
-		// setup constatns
+		Label dataL = L();
 		updateConstIdx(tl);
-		// start to generate code
+		for (size_t i = 0; i < constN_; i++) {
+			dd(constIdx_.getVal(i));
+		}
 		setSize(dataSize);
 		addr_ = getCurr<FuncFloat1*>();
-		totalN_ = getTotalNum();
-		keepN_ = getKeepNum(totalN_);
-		printf("keepN=%d\n", keepN_);
-		env.sf = new StackFrame(this, 3, keepN_ * simdByte_);
-		for (int i = 0; i < keepN_; i++) {
-			vmovups(ptr[rsp + i * simdByte_], Zmm(saveTbl[i]));
+		{
+			StackFrame sf(this, 3, UseRCX, keepN_ * simdByte_);
+			// store regs
+			for (int i = 0; i < keepN_; i++) {
+				vmovups(ptr[rsp + i * simdByte_], Zmm(saveTbl[i]));
+			}
+			gen_setConst();
+			const Reg64& dst = sf.p[0];
+			const Reg64& src = sf.p[1];
+			const Reg64& n = sf.p[2];
+			test(n, n);
+			Label mod16, exit;
+			mov(ecx, n);
+			and_(n, ~15u);
+			jz(mod16);
+			puts("execOneLoop lp");
+		Label lp = L();
+			vmovups(Zmm(getVarIdx(0)), ptr[src]);
+			execOneLoop(tl);
+			vmovups(ptr[dst], Zmm(getTmpIdx(0)));
+			add(src, 64);
+			add(dst, 64);
+			sub(n, 16);
+			jnz(lp, T_NEAR);
+		L(mod16);
+			puts("execOneLoop mod16");
+			and_(ecx, 15);
+			jz(exit, T_NEAR);
+			mov(eax, 1);
+			shl(eax, cl);
+			sub(eax, 1);
+			kmovd(k1, eax);
+			vmovups(Zmm(getVarIdx(0))|k1|T_z, ptr[src]);
+			execOneLoop(tl);
+			vmovups(ptr[dst]|k1, Zmm(getTmpIdx(0))|k1);
+		L(exit);
+			// restore regs
+			for (int i = 0; i < keepN_; i++) {
+				vmovups(Zmm(saveTbl[i]), ptr[rsp + i * simdByte_]);
+			}
 		}
-		gen_setConst();
-		const Reg64& n = env.sf->p[2];
-		test(n, n);
-		Label lpL, exitL;
-		jz(exitL, T_NEAR);
-	L(lpL);
-		for (uint32_t i = 0; i < varN_; i++) {
-			vmovss(Xmm(getVarIdx(0)), ptr[env.sf->p[1]]);
-		}
-		execOneLoop(tl);
-		vmovss(ptr[env.sf->p[0]], Xmm(getTmpIdx(0)));
-		add(env.sf->p[1], 4);
-		add(env.sf->p[0], 4);
-		sub(env.sf->p[2], 1);
-		jnz(lpL, T_NEAR);
-	L(exitL);
-		for (int i = 0; i < keepN_; i++) {
-			vmovups(Zmm(saveTbl[i]), ptr[rsp + i * simdByte_]);
-		}
-		env.sf->close();
+		puts("setProtectModeRE");
 		setProtectModeRE();
 	}
 	void gen_setInt(int dst, uint32_t u)
 	{
 		if (debug) {
-			printf("mov eax, 0x%08x(%f)\n", u, u2f(u));
-			printf("vmovd z%d, eax\n", dst);
+			printf("mov eax, 0x%08x\n", u);
+			printf("vpbroadcastd z%d, eax\n", dst);
 		}
 		mov(eax, u);
-		vmovd(Xmm(dst), eax);
-	}
-	void gen_loadVar(int dst, uint32_t u)
-	{
-		if (u != 0) throw cybozu::Exception("gen_loadVar") << u;
-		if (debug) printf("vmovss z%d, [%s]\n", dst, env.sf->p[1].toString());
-		vmovss(Xmm(dst), ptr[env.sf->p[1]]);
-	}
-	void gen_saveVar(uint32_t u, int src)
-	{
-		if (u != 0) throw cybozu::Exception("gen_saveVar") << u;
-		if (debug) printf("vmovss [%s], z%d\n", env.sf->p[0].toString(), src);
-		vmovss(ptr[env.sf->p[0]], Xmm(src));
+		vpbroadcastd(Zmm(dst), eax);
 	}
 	void gen_copy(int dst, int src)
 	{
-		if (debug) printf("vmovss z%d, z%d\n", dst, src);
+		if (debug) printf("vmovaps z%d, z%d\n", dst, src);
 		vmovaps(Zmm(dst), Zmm(src));
 	}
 	void gen_add(int dst, int src1, int src2)
 	{
-		if (debug) printf("vaddss z%d, z%d, z%d\n", dst, src1, src2);
+		if (debug) printf("vaddps z%d, z%d, z%d\n", dst, src1, src2);
 		vaddps(Zmm(dst), Zmm(src1), Zmm(src2));
 	}
 	void gen_sub(int dst, int src1, int src2)
 	{
-		if (debug) printf("vsubss z%d, z%d, z%d\n", dst, src1, src2);
+		if (debug) printf("vsubps z%d, z%d, z%d\n", dst, src1, src2);
 		vsubps(Zmm(dst), Zmm(src1), Zmm(src2));
 	}
 	void gen_mul(int dst, int src1, int src2)
 	{
-		if (debug) printf("vmulss z%d, z%d, z%d\n", dst, src1, src2);
+		if (debug) printf("vmulps z%d, z%d, z%d\n", dst, src1, src2);
 		vmulps(Zmm(dst), Zmm(src1), Zmm(src2));
 	}
 	void gen_div(int dst, int src1, int src2)
 	{
-		if (debug) printf("vdivss z%d, z%d, z%d\n", dst, src1, src2);
+		if (debug) printf("vdivps z%d, z%d, z%d\n", dst, src1, src2);
 		vdivps(Zmm(dst), Zmm(src1), Zmm(src2));
 	}
 	void gen_inv(int inout)
