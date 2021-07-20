@@ -107,7 +107,8 @@ CYBOZU_TEST_AUTO(x64)
 	gen.exec(tl);
 	float x[5] = { 1, 2, 3, 4, 5 };
 	float y[5];
-	gen.addr(y, x, 5);
+	const sg::FuncFloat1* addr = gen.getAddrFloat1();
+	addr(y, x, 5);
 	for (size_t i = 0; i < 5; i++) {
 		printf("%zd %f %f\n", i, x[i], y[i]);
 	}

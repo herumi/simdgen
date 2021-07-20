@@ -20,13 +20,15 @@ struct FuncInfo {
 struct GeneratorBase {
 	Index<uint32_t> constIdx_;
 	FuncInfo funcInfoTbl[FuncTypeN];
+	int simdByte_;
 	uint32_t varN_; // # variables
 	uint32_t constN_; // # constants
 	uint32_t maxFuncTmpN_; // max # of regs used in functions
 	uint32_t maxTmpN_; // max # of regs in evaluation
 	bool print_;
 	GeneratorBase()
-		: varN_(0)
+		: simdByte_(32 / 8) // one float
+		, varN_(0)
 		, constN_(0)
 		, maxFuncTmpN_(0)
 		, maxTmpN_(0)
@@ -184,7 +186,7 @@ struct GeneratorBase {
 	{
 		const uint32_t varN = tl.getVarNum();
 		gen_init(tl);
-puts("execOneLoop");
+		puts("execOneLoop");
 		// varN input
 		for (uint32_t i = 0; i < varN; i++) {
 			gen_loadVar(getVarIdxOffset() + i, i);

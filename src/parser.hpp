@@ -180,8 +180,6 @@ struct Parser {
 				throw cybozu::Exception("bad func") << str;
 			}
 			if (next) {
-//				uint32_t idx = tl.getVarIdx(str);
-//				tl.appendIdx(Var, idx);
 				tl.appendVar(str);
 				nest_++;
 				tl.updateMaxRegStackNum(nest_);

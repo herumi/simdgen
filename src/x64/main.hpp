@@ -83,25 +83,29 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	static const size_t codeSize = 8192;
 	MIE_ALIGN(4096) uint8_t buf_[dataSize + codeSize];
 	Env env;
-	FuncFloat1 *addr;
+	FuncFloat1 *addr_;
 	Label lpL;
 	Label exitL;
-	int simdByte_;
+	int totalN_;
+	int keepN_;
 	bool debug;
 
 	Generator()
 		: CodeGenerator(sizeof(buf_), DontSetProtectRWE)
 		, env()
-		, addr(0)
-		, simdByte_(32)
+		, addr_(0)
+		, totalN_(0)
+		, keepN_(0)
 		, debug(true)
 	{
+		simdByte_ = 512 / 8;
 		setFuncInfoTbl();
 	}
 	~Generator()
 	{
 		setProtectModeRW();
 	}
+	const FuncFloat1* getAddrFloat1() const { return addr_; }
 	void setFuncInfoTbl()
 	{
 		for (size_t i = 0; i < FuncTypeN; i++) {
@@ -115,7 +119,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	void gen_init(const sg::TokenList& tl)
 	{
 		if (debug) puts("gen_init");
-#if 0
+#if 1
 		Cpu cpu;
 		if (!cpu.has(Xbyak::util::Cpu::tAVX512F)) {
 			throw cybozu::Exception("AVX-512 is not supported");
@@ -125,13 +129,13 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		updateConstIdx(tl);
 		// start to generate code
 		setSize(dataSize);
-		addr = getCurr<FuncFloat1*>();
-		uint32_t totalN = getTotalNum();
-		int keepN = getKeepNum(totalN);
-		printf("keepN=%d\n", keepN);
-		env.sf = new StackFrame(this, 3, keepN * simdByte_);
-		for (int i = 0; i < keepN; i++) {
-			vmovups(ptr[rsp + i * simdByte_], Ymm(saveTbl[i]));
+		addr_ = getCurr<FuncFloat1*>();
+		totalN_ = getTotalNum();
+		keepN_ = getKeepNum(totalN_);
+		printf("keepN=%d\n", keepN_);
+		env.sf = new StackFrame(this, 3, keepN_ * simdByte_);
+		for (int i = 0; i < keepN_; i++) {
+			vmovups(ptr[rsp + i * simdByte_], Zmm(saveTbl[i]));
 		}
 		gen_setConst();
 		const Reg64& n = env.sf->p[2];
@@ -163,32 +167,32 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	void gen_copy(int dst, int src)
 	{
 		if (debug) printf("vmovss z%d, z%d\n", dst, src);
-		vmovss(Xmm(dst), Xmm(src));
+		vmovaps(Zmm(dst), Zmm(src));
 	}
 	void gen_add(int dst, int src1, int src2)
 	{
 		if (debug) printf("vaddss z%d, z%d, z%d\n", dst, src1, src2);
-		vaddss(Xmm(dst), Xmm(src1), Xmm(src2));
+		vaddps(Zmm(dst), Zmm(src1), Zmm(src2));
 	}
 	void gen_sub(int dst, int src1, int src2)
 	{
 		if (debug) printf("vsubss z%d, z%d, z%d\n", dst, src1, src2);
-		vsubss(Xmm(dst), Xmm(src1), Xmm(src2));
+		vsubps(Zmm(dst), Zmm(src1), Zmm(src2));
 	}
 	void gen_mul(int dst, int src1, int src2)
 	{
 		if (debug) printf("vmulss z%d, z%d, z%d\n", dst, src1, src2);
-		vmulss(Xmm(dst), Xmm(src1), Xmm(src2));
+		vmulps(Zmm(dst), Zmm(src1), Zmm(src2));
 	}
 	void gen_div(int dst, int src1, int src2)
 	{
 		if (debug) printf("vdivss z%d, z%d, z%d\n", dst, src1, src2);
-		vdivss(Xmm(dst), Xmm(src1), Xmm(src2));
+		vdivps(Zmm(dst), Zmm(src1), Zmm(src2));
 	}
 	void gen_inv(int inout)
 	{
 		if (debug) printf("inv z%d\n", inout);
-		vdivss(Xmm(inout), Xmm(getConstIdx(f2u(1.0))), Xmm(inout));
+		vdivps(Zmm(inout), Zmm(getConstIdx(f2u(1.0))), Zmm(inout));
 //		throw cybozu::Exception("not support gen_inv") << inout;
 	}
 	void gen_exp(int inout)
@@ -212,10 +216,8 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		sub(env.sf->p[2], 1);
 		jnz(lpL, T_NEAR);
 	L(exitL);
-		uint32_t totalN = getTotalNum();
-		int keepN = getKeepNum(totalN);
-		for (int i = 0; i < keepN; i++) {
-			vmovups(Ymm(saveTbl[i]), ptr[rsp + i * simdByte_]);
+		for (int i = 0; i < keepN_; i++) {
+			vmovups(Zmm(saveTbl[i]), ptr[rsp + i * simdByte_]);
 		}
 		env.sf->close();
 		setProtectModeRE();
