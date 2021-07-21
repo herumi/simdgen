@@ -62,6 +62,39 @@ struct ExpTbl {
 	}
 } g_expTbl;
 
+struct LogTbl {
+	static const int N = 9;
+	uint32_t i127shl23;
+	uint32_t x7fffff;
+	float log2;
+	float f2div3;
+	float log1p5;
+	float coef[N];
+	static const int tmpN = 2;
+	LogTbl()
+		: i127shl23(127 << 23)
+		, x7fffff(0x7fffff)
+		, log2(std::log(2.0f))
+		, f2div3(2.0f / 3)
+		, log1p5(std::log(1.5f))
+	{
+		const float tbl[N] = {
+			 1.0, // must be 1
+			-0.49999985195974875681242,
+			 0.33333220526061677705782,
+			-0.25004206220486390058000,
+			 0.20010985747510067100077,
+			-0.16481566812093889672203,
+			 0.13988269735629330763020,
+			-0.15049504706005165294002,
+			 0.14095711402233803479921,
+		};
+		for (int i = 0; i < N; i++) {
+			coef[i] = tbl[i];
+		}
+	}
+} g_logTbl;
+
 struct Generator : CodeGenerator, sg::GeneratorBase {
 	static const size_t dataSize = 4096;
 	static const size_t codeSize = 8192;
@@ -106,6 +139,16 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 				}
 				fi.tmpN = ExpTbl::tmpN;
 				break;
+			case Log:
+				fi.constTbl.push_back(g_logTbl.i127shl23);
+				fi.constTbl.push_back(g_logTbl.x7fffff);
+				fi.constTbl.push_back(f2u(g_logTbl.log2));
+				fi.constTbl.push_back(f2u(g_logTbl.f2div3));
+				fi.constTbl.push_back(f2u(g_logTbl.log1p5));
+				for (int j = 0; j < LogTbl::N; j++) {
+					fi.constTbl.push_back(f2u(g_logTbl.coef[j]));
+				}
+				fi.tmpN = LogTbl::tmpN;
 			default:
 				break;
 			}
@@ -244,7 +287,41 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	void gen_log(int inout)
 	{
 		printf("gen_log %d\n", inout);
-//		throw cybozu::Exception("not support gen_log") << inout;
+		const Zmm i127shl23 = Zmm(getFloatIdx(u2f(g_logTbl.i127shl23)));
+		const Zmm x7fffff = Zmm(getFloatIdx(u2f(g_logTbl.x7fffff)));
+		const Zmm f2div3 = Zmm(getFloatIdx(g_logTbl.f2div3));
+		const Zmm log2 = Zmm(getFloatIdx(g_logTbl.log2));
+		const Zmm log1p5 = Zmm(getFloatIdx(g_logTbl.log1p5));
+		const Zmm tbl[] = {
+			Zmm(getFloatIdx(g_logTbl.coef[0])),
+			Zmm(getFloatIdx(g_logTbl.coef[1])),
+			Zmm(getFloatIdx(g_logTbl.coef[2])),
+			Zmm(getFloatIdx(g_logTbl.coef[3])),
+			Zmm(getFloatIdx(g_logTbl.coef[4])),
+			Zmm(getFloatIdx(g_logTbl.coef[5])),
+			Zmm(getFloatIdx(g_logTbl.coef[6])),
+			Zmm(getFloatIdx(g_logTbl.coef[7])),
+			Zmm(getFloatIdx(g_logTbl.coef[8])),
+		};
+		const Zmm t0 = Zmm(inout);
+		const Zmm t1 = Zmm(getFuncTmpIdx(0));
+		const Zmm t2 = Zmm(getFuncTmpIdx(1));
+
+		vpsubd(t1, t0, i127shl23);
+		vpsrad(t1, t1, 23); // e
+		vcvtdq2ps(t1, t1); // float(e)
+		vpandd(t0, t0, x7fffff);
+		vpord(t0, t0, i127shl23); // y
+
+		vfmsub213ps(t0, f2div3, tbl[0]); // a
+		vfmadd213ps(t1, log2, log1p5); // e
+
+		int logN = g_logTbl.N;
+		vmovaps(t2, tbl[logN - 1]);
+		for (int i = logN - 2; i >= 0; i--) {
+			vfmadd213ps(t2, t0, tbl[i]);
+		}
+		vfmadd213ps(t0, t2, t1);
 	}
 	void gen_tanh(int inout)
 	{
