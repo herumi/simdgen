@@ -66,14 +66,20 @@ struct LogTbl {
 	static const int N = 9;
 	uint32_t i127shl23;
 	uint32_t x7fffff;
+	uint32_t x7fffffff;
+	float one;
+	float f1div8;
 	float log2;
 	float f2div3;
 	float log1p5;
 	float coef[N];
-	static const int tmpN = 2;
+	static const int tmpN = 3;
 	LogTbl()
 		: i127shl23(127 << 23)
 		, x7fffff(0x7fffff)
+		, x7fffffff(0x7fffffff)
+		, one(1.0)
+		, f1div8(1.0f / 8)
 		, log2(std::log(2.0f))
 		, f2div3(2.0f / 3)
 		, log1p5(std::log(1.5f))
@@ -142,6 +148,9 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			case Log:
 				fi.constTbl.push_back(g_logTbl.i127shl23);
 				fi.constTbl.push_back(g_logTbl.x7fffff);
+				fi.constTbl.push_back(g_logTbl.x7fffffff);
+				fi.constTbl.push_back(f2u(g_logTbl.one));
+				fi.constTbl.push_back(f2u(g_logTbl.f1div8));
 				fi.constTbl.push_back(f2u(g_logTbl.log2));
 				fi.constTbl.push_back(f2u(g_logTbl.f2div3));
 				fi.constTbl.push_back(f2u(g_logTbl.log1p5));
@@ -289,6 +298,9 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		printf("gen_log %d\n", inout);
 		const Zmm i127shl23 = Zmm(getFloatIdx(u2f(g_logTbl.i127shl23)));
 		const Zmm x7fffff = Zmm(getFloatIdx(u2f(g_logTbl.x7fffff)));
+		const Zmm x7fffffff = Zmm(getFloatIdx(u2f(g_logTbl.x7fffffff)));
+		const Zmm one = Zmm(getFloatIdx(1.0f));
+		const Zmm f1div8 = Zmm(getFloatIdx(g_logTbl.f1div8));
 		const Zmm f2div3 = Zmm(getFloatIdx(g_logTbl.f2div3));
 		const Zmm log2 = Zmm(getFloatIdx(g_logTbl.log2));
 		const Zmm log1p5 = Zmm(getFloatIdx(g_logTbl.log1p5));
@@ -306,7 +318,9 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		const Zmm t0 = Zmm(inout);
 		const Zmm t1 = Zmm(getFuncTmpIdx(0));
 		const Zmm t2 = Zmm(getFuncTmpIdx(1));
+		const Zmm keep = Zmm(getFuncTmpIdx(2));
 
+		vmovaps(keep, t0);
 		vpsubd(t1, t0, i127shl23);
 		vpsrad(t1, t1, 23); // e
 		vcvtdq2ps(t1, t1); // float(e)
@@ -315,6 +329,13 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 
 		vfmsub213ps(t0, f2div3, tbl[0]); // a
 		vfmadd213ps(t1, log2, log1p5); // e
+#if 1
+		vsubps(t2, keep, one);
+		vandps(t2, t2, x7fffffff);
+		vcmpltps(k2, t2, f1div8);
+		vsubps(t0|k2, keep, one);
+		vxorps(t1|k2, t1);
+#endif
 
 		int logN = g_logTbl.N;
 		vmovaps(t2, tbl[logN - 1]);
