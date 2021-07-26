@@ -207,10 +207,10 @@ struct GeneratorBase {
 	}
 };
 
-struct FuncTmp {
+struct FuncTmpIdx {
 	GeneratorBase& gb_;
 	int curIdx_;
-	FuncTmp(GeneratorBase& gb)
+	FuncTmpIdx(GeneratorBase& gb)
 		 : gb_(gb)
 		 , curIdx_(gb.getCurFuncTmpIdx())
 	{

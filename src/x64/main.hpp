@@ -278,9 +278,9 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			Zmm(getFloatIdx(g_expTbl.coef[4])),
 		};
 		const Zmm t0 = Zmm(inout);
-		FuncTmp ft(*this);
-		const Zmm t1 = Zmm(ft.getIdx());
-		const Zmm t2 = Zmm(ft.getIdx());
+		FuncTmpIdx fti(*this);
+		const Zmm t1 = Zmm(fti.getIdx());
+		const Zmm t2 = Zmm(fti.getIdx());
 
 		vmulps(t0, log2_e);
 		vrndscaleps(t1, t0, 0); // n = round(x)
@@ -317,10 +317,10 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			Zmm(getFloatIdx(g_logTbl.coef[8])),
 		};
 		const Zmm t0 = Zmm(inout);
-		FuncTmp ft(*this);
-		const Zmm t1 = Zmm(ft.getIdx());
-		const Zmm t2 = Zmm(ft.getIdx());
-		const Zmm keep = Zmm(ft.getIdx());
+		FuncTmpIdx fti(*this);
+		const Zmm t1 = Zmm(fti.getIdx());
+		const Zmm t2 = Zmm(fti.getIdx());
+		const Zmm keep = Zmm(fti.getIdx());
 
 		vmovaps(keep, t0);
 		vpsubd(t1, t0, i127shl23);
