@@ -15,23 +15,64 @@ struct FuncInfo {
 	}
 };
 
+struct IndexRange {
+	int offset_;
+	int max_;
+	int cur_;
+	IndexRange()
+		: offset_(0)
+		, max_(0)
+		, cur_(0)
+	{
+	}
+	int alloc()
+	{
+		if (cur_ == max_) throw cybozu::Exception("too alloc") << max_;
+		return offset_ + cur_++;
+	}
+	int getCur() const { return cur_; }
+	void setCur(int cur) { cur_ = cur; }
+	void updateMax(int max)
+	{
+		if (max > max_) max_ = max;
+	}
+	int getMax() const { return max_; }
+};
+
+struct IndexRangeManager {
+	IndexRange ir_;
+	int cur_;
+	IndexRangeManager(IndexRange& ir)
+		 : ir_(ir)
+		 , cur_(ir_.getCur())
+	{
+	}
+	~IndexRangeManager()
+	{
+		ir_.setCur(cur_);
+	}
+	int allocIdx()
+	{
+		return ir_.alloc();
+	}
+};
+
 struct GeneratorBase {
 	Index<uint32_t> constIdx_;
 	FuncInfo funcInfoTbl[FuncTypeN];
 	int simdByte_;
 	uint32_t varN_; // # variables
 	uint32_t constN_; // # constants
-	uint32_t maxFuncTmpN_; // max # of regs used in functions
-	uint32_t curFuncTmpIdx_;
+	IndexRange funcTmpReg_;
 	uint32_t maxTmpN_; // max # of regs in evaluation
+	uint32_t curMaskTmpIdx_;
 	bool print_;
 	GeneratorBase()
 		: simdByte_(32 / 8) // one float
 		, varN_(0)
 		, constN_(0)
-		, maxFuncTmpN_(0)
-		, curFuncTmpIdx_(0)
 		, maxTmpN_(0)
+		, curMaskTmpIdx_(0)
 		, print_(false)
 	{
 	}
@@ -41,15 +82,7 @@ struct GeneratorBase {
 	int getVarIdxOffset() const { return 0; }
 	int getVarIdx(int i) const { return getVarIdxOffset() + i; }
 	uint32_t getConstIdxOffset() const { return varN_; }
-	uint32_t getFuncTmpOffset() const { return varN_ + constN_; }
-	int allocFuncTmp()
-	{
-		if (curFuncTmpIdx_ == maxFuncTmpN_) throw cybozu::Exception("too allocFuncTmp") << maxFuncTmpN_;
-		return getFuncTmpOffset() + curFuncTmpIdx_++;
-	}
-	int getCurFuncTmpIdx() const { return curFuncTmpIdx_; }
-	void setCurFuncTmpIdx(int idx) { curFuncTmpIdx_ = idx; }
-	uint32_t getTmpOffset() const { return varN_ + constN_ + maxFuncTmpN_; }
+	uint32_t getTmpOffset() const { return varN_ + constN_ + funcTmpReg_.getMax(); }
 	int getTmpIdx(int i) const { return getTmpOffset() + i; }
 	uint32_t getTotalNum() const { return getTmpOffset() + maxTmpN_; }
 
@@ -69,10 +102,10 @@ struct GeneratorBase {
 				constIdx_.append(vv[i].v);
 			}
 		}
-		maxFuncTmpN_ = 0;
+		funcTmpReg_.max_ = 0;
 		/*
 			append const var in used functions
-			set maxFuncTmpN_
+			set funcTmpReg_
 		*/
 		for (int i = 0; i < sg::FuncTypeN; i++) {
 			if (!tl.isUsedFunc(i)) continue;
@@ -81,12 +114,12 @@ struct GeneratorBase {
 			for (size_t j = 0; j < constTbl.size(); j++) {
 				constIdx_.append(constTbl[j]);
 			}
-			if (fi.tmpN > maxFuncTmpN_) maxFuncTmpN_ = fi.tmpN;
+			funcTmpReg_.updateMax(fi.tmpN);
 		}
 		varN_ = tl.getVarNum();
 		constN_ = constIdx_.size();
 		maxTmpN_ = tl.getMaxTmpNum();
-		printf("varN=%d constN=%d maxFuncTmpN=%d maxTmpN=%d\n", varN_, constN_, maxFuncTmpN_, maxTmpN_);
+		printf("varN=%d constN=%d funcTmpReg.max=%d maxTmpN=%d\n", varN_, constN_, funcTmpReg_.getMax(), maxTmpN_);
 	}
 	void gen_setConst()
 	{
@@ -202,24 +235,6 @@ struct GeneratorBase {
 				throw cybozu::Exception("bad type") << i << v.type;
 			}
 		}
-	}
-};
-
-struct FuncTmpIdx {
-	GeneratorBase& gb_;
-	int curIdx_;
-	FuncTmpIdx(GeneratorBase& gb)
-		 : gb_(gb)
-		 , curIdx_(gb.getCurFuncTmpIdx())
-	{
-	}
-	~FuncTmpIdx()
-	{
-		gb_.setCurFuncTmpIdx(curIdx_);
-	}
-	int getIdx()
-	{
-		return gb_.allocFuncTmp();
 	}
 };
 
