@@ -44,7 +44,7 @@ struct ExpTbl {
 	float log2;
 	float log2_e;
 	float coef[N];
-	static const int tmpN = 2;
+	static const int tmpRegN = 2;
 	ExpTbl()
 		: log2(std::log(2.0f))
 		, log2_e(1.0f / log2)
@@ -73,7 +73,7 @@ struct LogTbl {
 	float f2div3;
 	float log1p5;
 	float coef[N];
-	static const int tmpN = 3;
+	static const int tmpRegN = 3;
 	LogTbl()
 		: i127shl23(127 << 23)
 		, x7fffff(0x7fffff)
@@ -135,7 +135,8 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			switch (i) {
 			case Inv:
 				fi.constTbl.push_back(f2u(1.0));
-				fi.tmpN = 1;
+				fi.tmpRegN = 1;
+				fi.tmpMaskN = 0;
 				break;
 			case Exp:
 				fi.constTbl.push_back(f2u(g_expTbl.log2));
@@ -143,7 +144,8 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 				for (int j = 0; j < ExpTbl::N; j++) {
 					fi.constTbl.push_back(f2u(g_expTbl.coef[j]));
 				}
-				fi.tmpN = ExpTbl::tmpN;
+				fi.tmpRegN = ExpTbl::tmpRegN;
+				fi.tmpMaskN = 0;
 				break;
 			case Log:
 				fi.constTbl.push_back(g_logTbl.i127shl23);
@@ -157,7 +159,8 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 				for (int j = 0; j < LogTbl::N; j++) {
 					fi.constTbl.push_back(f2u(g_logTbl.coef[j]));
 				}
-				fi.tmpN = LogTbl::tmpN;
+				fi.tmpRegN = LogTbl::tmpRegN;
+				fi.tmpMaskN = 1;
 			default:
 				break;
 			}
@@ -278,9 +281,9 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			Zmm(getFloatIdx(g_expTbl.coef[4])),
 		};
 		const Zmm t0 = Zmm(inout);
-		IndexRangeManager irm(funcTmpReg_);
-		const Zmm t1 = Zmm(irm.allocIdx());
-		const Zmm t2 = Zmm(irm.allocIdx());
+		IndexRangeManager ftr(funcTmpReg_);
+		const Zmm t1 = Zmm(ftr.allocIdx());
+		const Zmm t2 = Zmm(ftr.allocIdx());
 
 		vmulps(t0, log2_e);
 		vrndscaleps(t1, t0, 0); // n = round(x)
@@ -316,11 +319,13 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			Zmm(getFloatIdx(g_logTbl.coef[7])),
 			Zmm(getFloatIdx(g_logTbl.coef[8])),
 		};
-		const Zmm t0 = Zmm(inout);
-		IndexRangeManager irm(funcTmpReg_);
-		const Zmm t1 = Zmm(irm.allocIdx());
-		const Zmm t2 = Zmm(irm.allocIdx());
-		const Zmm keep = Zmm(irm.allocIdx());
+		const Zmm t0(inout);
+		IndexRangeManager ftr(funcTmpReg_);
+		const Zmm t1(ftr.allocIdx());
+		const Zmm t2(ftr.allocIdx());
+		const Zmm keep(ftr.allocIdx());
+		IndexRangeManager ftm(funcTmpMask_);
+		const Opmask mask(ftm.allocIdx());
 
 		vmovaps(keep, t0);
 		vpsubd(t1, t0, i127shl23);
@@ -334,9 +339,9 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 #if 1
 		vsubps(t2, keep, one);
 		vandps(t2, t2, x7fffffff);
-		vcmpltps(k2, t2, f1div8);
-		vsubps(t0|k2, keep, one);
-		vxorps(t1|k2, t1);
+		vcmpltps(mask, t2, f1div8);
+		vsubps(t0|mask, keep, one);
+		vxorps(t1|mask, t1);
 #endif
 
 		int logN = g_logTbl.N;

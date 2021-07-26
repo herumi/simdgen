@@ -8,9 +8,11 @@ namespace sg {
 
 struct FuncInfo {
 	IntVec constTbl;
-	uint32_t tmpN; // # of regs used temporary
+	int tmpRegN; // # of regs used temporary
+	int tmpMaskN; // # of mask regs used temporary
 	FuncInfo()
-		: tmpN(0)
+		: tmpRegN(0)
+		, tmpMaskN(0)
 	{
 	}
 };
@@ -37,6 +39,7 @@ struct IndexRange {
 		if (max > max_) max_ = max;
 	}
 	int getMax() const { return max_; }
+	void setOffset(int offset) { offset_ = offset; }
 };
 
 struct IndexRangeManager {
@@ -64,6 +67,7 @@ struct GeneratorBase {
 	uint32_t varN_; // # variables
 	uint32_t constN_; // # constants
 	IndexRange funcTmpReg_;
+	IndexRange funcTmpMask_;
 	uint32_t maxTmpN_; // max # of regs in evaluation
 	uint32_t curMaskTmpIdx_;
 	bool print_;
@@ -114,10 +118,13 @@ struct GeneratorBase {
 			for (size_t j = 0; j < constTbl.size(); j++) {
 				constIdx_.append(constTbl[j]);
 			}
-			funcTmpReg_.updateMax(fi.tmpN);
+			funcTmpReg_.updateMax(fi.tmpRegN);
+			funcTmpMask_.updateMax(fi.tmpMaskN);
 		}
 		varN_ = tl.getVarNum();
 		constN_ = constIdx_.size();
+		funcTmpReg_.setOffset(varN_ + constN_);
+		funcTmpMask_.setOffset(2); // mask0 and mask1 are reserved
 		maxTmpN_ = tl.getMaxTmpNum();
 		printf("varN=%d constN=%d funcTmpReg.max=%d maxTmpN=%d\n", varN_, constN_, funcTmpReg_.getMax(), maxTmpN_);
 	}
