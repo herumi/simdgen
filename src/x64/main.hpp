@@ -271,8 +271,8 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	void gen_exp(int inout)
 	{
 		if (debug) printf("exp z%d\n", inout);
-		const Zmm log2 = Zmm(getFloatIdx(g_expTbl.log2));
-		const Zmm log2_e = Zmm(getFloatIdx(g_expTbl.log2_e));
+		const Zmm log2(getFloatIdx(g_expTbl.log2));
+		const Zmm log2_e(getFloatIdx(g_expTbl.log2_e));
 		const Zmm tbl[] = {
 			Zmm(getFloatIdx(g_expTbl.coef[0])),
 			Zmm(getFloatIdx(g_expTbl.coef[1])),
@@ -280,10 +280,10 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			Zmm(getFloatIdx(g_expTbl.coef[3])),
 			Zmm(getFloatIdx(g_expTbl.coef[4])),
 		};
-		const Zmm t0 = Zmm(inout);
+		const Zmm t0(inout);
 		IndexRangeManager ftr(funcTmpReg_);
-		const Zmm t1 = Zmm(ftr.allocIdx());
-		const Zmm t2 = Zmm(ftr.allocIdx());
+		const Zmm t1(ftr.allocIdx());
+		const Zmm t2(ftr.allocIdx());
 
 		vmulps(t0, log2_e);
 		vrndscaleps(t1, t0, 0); // n = round(x)
@@ -300,14 +300,14 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	void gen_log(int inout)
 	{
 		printf("gen_log %d\n", inout);
-		const Zmm i127shl23 = Zmm(getFloatIdx(u2f(g_logTbl.i127shl23)));
-		const Zmm x7fffff = Zmm(getFloatIdx(u2f(g_logTbl.x7fffff)));
-		const Zmm x7fffffff = Zmm(getFloatIdx(u2f(g_logTbl.x7fffffff)));
-		const Zmm one = Zmm(getFloatIdx(1.0f));
-		const Zmm f1div8 = Zmm(getFloatIdx(g_logTbl.f1div8));
-		const Zmm f2div3 = Zmm(getFloatIdx(g_logTbl.f2div3));
-		const Zmm log2 = Zmm(getFloatIdx(g_logTbl.log2));
-		const Zmm log1p5 = Zmm(getFloatIdx(g_logTbl.log1p5));
+		const Zmm i127shl23(getFloatIdx(u2f(g_logTbl.i127shl23)));
+		const Zmm x7fffff(getFloatIdx(u2f(g_logTbl.x7fffff)));
+		const Zmm x7fffffff(getFloatIdx(u2f(g_logTbl.x7fffffff)));
+		const Zmm one(getFloatIdx(1.0f));
+		const Zmm f1div8(getFloatIdx(g_logTbl.f1div8));
+		const Zmm f2div3(getFloatIdx(g_logTbl.f2div3));
+		const Zmm log2(getFloatIdx(g_logTbl.log2));
+		const Zmm log1p5(getFloatIdx(g_logTbl.log1p5));
 		const Zmm tbl[] = {
 			Zmm(getFloatIdx(g_logTbl.coef[0])),
 			Zmm(getFloatIdx(g_logTbl.coef[1])),
