@@ -24,6 +24,7 @@ struct GeneratorBase {
 	uint32_t varN_; // # variables
 	uint32_t constN_; // # constants
 	uint32_t maxFuncTmpN_; // max # of regs used in functions
+	uint32_t curFuncTmpIdx_;
 	uint32_t maxTmpN_; // max # of regs in evaluation
 	bool print_;
 	GeneratorBase()
@@ -31,6 +32,7 @@ struct GeneratorBase {
 		, varN_(0)
 		, constN_(0)
 		, maxFuncTmpN_(0)
+		, curFuncTmpIdx_(0)
 		, maxTmpN_(0)
 		, print_(false)
 	{
@@ -42,7 +44,13 @@ struct GeneratorBase {
 	int getVarIdx(int i) const { return getVarIdxOffset() + i; }
 	uint32_t getConstIdxOffset() const { return varN_; }
 	uint32_t getFuncTmpOffset() const { return varN_ + constN_; }
-	int getFuncTmpIdx(int i) const { return getFuncTmpOffset() + i; }
+	int allocFuncTmp()
+	{
+		if (curFuncTmpIdx_ == maxFuncTmpN_) throw cybozu::Exception("too allocFuncTmp") << maxFuncTmpN_;
+		return getFuncTmpOffset() + curFuncTmpIdx_++;
+	}
+	int getCurFuncTmpIdx() const { return curFuncTmpIdx_; }
+	void setCurFuncTmpIdx(int idx) { curFuncTmpIdx_ = idx; }
 	uint32_t getTmpOffset() const { return varN_ + constN_ + maxFuncTmpN_; }
 	int getTmpIdx(int i) const { return getTmpOffset() + i; }
 	uint32_t getTotalNum() const { return getTmpOffset() + maxTmpN_; }
@@ -196,6 +204,24 @@ struct GeneratorBase {
 				throw cybozu::Exception("bad type") << i << v.type;
 			}
 		}
+	}
+};
+
+struct FuncTmp {
+	GeneratorBase& gb_;
+	int curIdx_;
+	FuncTmp(GeneratorBase& gb)
+		 : gb_(gb)
+		 , curIdx_(gb.getCurFuncTmpIdx())
+	{
+	}
+	~FuncTmp()
+	{
+		gb_.setCurFuncTmpIdx(curIdx_);
+	}
+	int getIdx()
+	{
+		return gb_.allocFuncTmp();
 	}
 };
 
