@@ -43,12 +43,30 @@ enum FuncType {
 	FuncTypeN
 };
 
-const char *funcNameTbl[] = {
-	"inv",
-	"exp",
-	"log",
-	"tanh",
-};
+inline const char* getFuncName(size_t i)
+{
+	static const char *tbl[] = {
+		"inv",
+		"exp",
+		"log",
+		"tanh",
+	};
+	if (i >= CYBOZU_NUM_OF_ARRAY(tbl)) {
+		throw cybozu::Exception("bad Func") << i;
+	}
+	return tbl[i];
+}
+
+inline int getFuncKind(const std::string& str)
+{
+	for (int i = 0; i < FuncTypeN; i++) {
+		if (str == getFuncName(i)) {
+			return i;
+		}
+	}
+	throw cybozu::Exception("getFuncKind:bad name") << str;
+}
+
 
 template<class T>
 struct Index {
@@ -134,10 +152,7 @@ struct Value {
 				return tbl[v];
 			}
 		case Func:
-			if (v >= CYBOZU_NUM_OF_ARRAY(funcNameTbl)) {
-				throw cybozu::Exception("bad Func") << v;
-			}
-			return funcNameTbl[v];
+			return getFuncName(v);
 		default:
 			throw cybozu::Exception("bad type") << type;
 		}
@@ -155,8 +170,7 @@ struct TokenList {
 	Index<std::string> varIdx_;
 	ValueVec vv;
 	int maxRegStackN_;
-	static const size_t funcN = CYBOZU_NUM_OF_ARRAY(funcNameTbl);
-	bool usedFuncTbl_[funcN];
+	bool usedFuncTbl_[FuncTypeN];
 	TokenList()
 		: maxRegStackN_(0)
 		, usedFuncTbl_()
@@ -185,7 +199,7 @@ struct TokenList {
 	void clear()
 	{
 		maxRegStackN_ = 0;
-		for (size_t i = 0; i < funcN; i++) {
+		for (size_t i = 0; i < FuncTypeN; i++) {
 			usedFuncTbl_[i] = false;
 		}
 	}

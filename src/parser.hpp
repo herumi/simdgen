@@ -119,16 +119,6 @@ inline const char* parseVar(std::string& v , const char *begin, const char *end)
 	return begin;
 }
 
-inline int getFuncKind(const std::string& str)
-{
-	for (uint32_t i = 0; i < CYBOZU_NUM_OF_ARRAY(funcNameTbl); i++) {
-		if (str == funcNameTbl[i]) {
-			return i;
-		}
-	}
-	throw cybozu::Exception("getFuncKind:bad name") << str;
-}
-
 /*
 	var = [a-zA-Z_]([a-zA-Z_0-9]*)
 	num = float

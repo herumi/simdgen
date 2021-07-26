@@ -6,8 +6,6 @@
 
 namespace sg {
 
-typedef void FuncFloat1(float *dst, const float *src, size_t n);
-
 struct FuncInfo {
 	IntVec constTbl;
 	uint32_t tmpN; // # of regs used temporary
@@ -215,7 +213,7 @@ struct FuncTmpIdx {
 		 , curIdx_(gb.getCurFuncTmpIdx())
 	{
 	}
-	~FuncTmp()
+	~FuncTmpIdx()
 	{
 		gb_.setCurFuncTmpIdx(curIdx_);
 	}

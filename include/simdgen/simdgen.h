@@ -8,6 +8,7 @@
 */
 
 #include <stdint.h> // for uint32_t
+#include <stdlib.h> // for size_t
 
 #if defined(_MSC_VER)
 	#ifdef SG_DONT_EXPORT
@@ -39,14 +40,20 @@ extern "C" {
 #endif
 
 typedef struct SgCode SgCode;
+typedef void SgFuncFloat1(float *dst, const float *src, size_t n);
 /*
 	create SgCode handler
 */
-SG_DLL_API int SgCreate(SgCode **code);
+SG_DLL_API SgCode* SgCreate();
 /*
 	destroy SgCode handler
 */
-SG_DLL_API void SgDestroy(SgCode *code);
+SG_DLL_API void SgDestroy(SgCode *sg);
+
+/*
+	create JIT function
+*/
+SG_DLL_API const SgFuncFloat1* SgGetFuncFloat1(SgCode *sg, const char *varName, const char *src);
 
 #ifdef __cplusplus
 }

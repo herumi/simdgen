@@ -104,8 +104,8 @@ struct LogTbl {
 struct Generator : CodeGenerator, sg::GeneratorBase {
 	static const size_t dataSize = 4096;
 	static const size_t codeSize = 8192;
-	MIE_ALIGN(4096) uint8_t buf_[dataSize + codeSize];
-	FuncFloat1 *addr_;
+	static const size_t totalSize = dataSize + codeSize;
+	SgFuncFloat1 *addr_;
 	Label dataL_;
 	int totalN_;
 	int keepN_;
@@ -113,7 +113,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	bool debug;
 
 	Generator()
-		: CodeGenerator(sizeof(buf_), DontSetProtectRWE)
+		: CodeGenerator(totalSize, DontSetProtectRWE)
 		, addr_(0)
 		, totalN_(0)
 		, keepN_(0)
@@ -127,7 +127,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	{
 		setProtectModeRW();
 	}
-	const FuncFloat1* getAddrFloat1() const { return addr_; }
+	const SgFuncFloat1* getAddrFloat1() const { return addr_; }
 	void setFuncInfoTbl()
 	{
 		for (size_t i = 0; i < FuncTypeN; i++) {
@@ -178,7 +178,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			dd(constIdx_.getVal(i));
 		}
 		setSize(dataSize);
-		addr_ = getCurr<FuncFloat1*>();
+		addr_ = getCurr<SgFuncFloat1*>();
 		{
 			StackFrame sf(this, 3, 1 | UseRCX, keepN_ * simdByte_);
 			// store regs
