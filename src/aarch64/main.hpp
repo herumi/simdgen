@@ -81,6 +81,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		const XReg& n = x2;
 		const ZRegS arg0 = ZReg(getVarIdx(0)).s;
 		gen_setConst();
+#if 0
 		Label skip;
 		b(skip);
 	Label lp = L();
@@ -92,6 +93,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	L(skip);
 		cmp(n, 16);
 		bge(lp);
+#endif
 
 		Label cond;
 		mov(tmpX_, 0);
@@ -99,12 +101,12 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	Label lp2 = L();
 		ld1w(arg0, p1, ptr(src, tmpX_, LSL, 2));
 		execOneLoop(tl);
+fcpy(arg0, p0, 2.5);
 		st1w(arg0, p1, ptr(dst, tmpX_, LSL, 2));
 		incd(tmpX_);
 	L(cond);
 		whilelt(p1.s, tmpX_, n);
 		b_first(lp2);
-		
 
 		// restore regs
 		for (int i = 0; i < keepN_; i++) {
@@ -117,35 +119,35 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	void gen_setInt(int dst, uint32_t u)
 	{
 		if (debug) {
-			printf("mov eax, 0x%08x\n", u);
-			printf("vpbroadcastd z%d, eax\n", dst);
+			printf("mov tmpW_, 0x%08x\n", u);
+			printf("cpy z%d, tmpW_\n", dst);
 		}
 		mov(tmpW_, u);
 		cpy(ZReg(dst).s, p0, tmpW_);
 	}
 	void gen_copy(int dst, int src)
 	{
-		if (debug) printf("vmovaps z%d, z%d\n", dst, src);
+		if (debug) printf("mov z%d, z%d\n", dst, src);
 		mov(ZReg(dst).s, p0, ZReg(src).s);
 	}
 	void gen_add(int dst, int src1, int src2)
 	{
-		if (debug) printf("vaddps z%d, z%d, z%d\n", dst, src1, src2);
+		if (debug) printf("fadd z%d, z%d, z%d\n", dst, src1, src2);
 		fadd(ZReg(dst).s, ZReg(src1).s, ZReg(src2).s);
 	}
 	void gen_sub(int dst, int src1, int src2)
 	{
-		if (debug) printf("vsubps z%d, z%d, z%d\n", dst, src1, src2);
+		if (debug) printf("fsub z%d, z%d, z%d\n", dst, src1, src2);
 		fsub(ZReg(dst).s, ZReg(src1).s, ZReg(src2).s);
 	}
 	void gen_mul(int dst, int src1, int src2)
 	{
-		if (debug) printf("vmulps z%d, z%d, z%d\n", dst, src1, src2);
+		if (debug) printf("fmul z%d, z%d, z%d\n", dst, src1, src2);
 		fmul(ZReg(dst).s, ZReg(src1).s, ZReg(src2).s);
 	}
 	void gen_div(int dst, int src1, int src2)
 	{
-		if (debug) printf("vdivps z%d, z%d, z%d\n", dst, src1, src2);
+		if (debug) printf("fdiv z%d, z%d, z%d\n", dst, src1, src2);
 		movprfx(ZReg(dst), ZReg(src1));
 		fdiv(ZReg(dst).s, p0, ZReg(src2).s);
 	}
