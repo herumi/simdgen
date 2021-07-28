@@ -27,7 +27,7 @@
 	#define SG_DLL_API
 #endif
 
-#if !(defined(SG_AVX) || defined(XG_SVE))
+#if !(defined(SG_X64) || defined(SG_AARCH64))
 	#if defined(_WIN64) || defined(__x86_64__)
 		#define SG_X64
 	#else
@@ -53,7 +53,7 @@ SG_DLL_API void SgDestroy(SgCode *sg);
 /*
 	create JIT function
 */
-SG_DLL_API const SgFuncFloat1* SgGetFuncFloat1(SgCode *sg, const char *varName, const char *src);
+SG_DLL_API SgFuncFloat1* SgGetFuncFloat1(SgCode *sg, const char *varName, const char *src);
 
 #ifdef __cplusplus
 }

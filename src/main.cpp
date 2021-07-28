@@ -2,7 +2,13 @@
 #ifdef SG_X64
 #include "x64/main.hpp"
 #endif
+#ifdef SG_AARCH64
+#include "aarch64/main.hpp"
+#endif
 #include <stdio.h>
+
+const sg::ExpTbl sg::g_expTbl;
+const sg::LogTbl sg::g_logTbl;
 
 struct SgCode {
 	sg::Generator gen;
@@ -18,7 +24,7 @@ void SgDestroy(SgCode *sg)
 	delete sg;
 }
 
-const SgFuncFloat1* SgGetFuncFloat1(SgCode *sg, const char *varName, const char *src)
+SgFuncFloat1* SgGetFuncFloat1(SgCode *sg, const char *varName, const char *src)
 	try
 {
 	sg::TokenList tl;

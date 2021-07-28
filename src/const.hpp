@@ -24,7 +24,7 @@ struct ExpTbl {
 			coef[i] = u2f(tbl[i]);
 		}
 	}
-} g_expTbl;
+};
 
 struct LogTbl {
 	static const int N = 9;
@@ -64,7 +64,9 @@ struct LogTbl {
 			coef[i] = tbl[i];
 		}
 	}
-} g_logTbl;
+};
 
+extern const ExpTbl g_expTbl;
+extern const LogTbl g_logTbl;
 } // sg
 

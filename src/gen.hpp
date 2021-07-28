@@ -2,7 +2,9 @@
 #include <simdgen/simdgen.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <cmath>
 #include "tokenlist.hpp"
+#include "const.hpp"
 
 namespace sg {
 
@@ -240,6 +242,44 @@ struct GeneratorBase {
 				break;
 			default:
 				throw cybozu::Exception("bad type") << i << v.type;
+			}
+		}
+	}
+	void setFuncInfoTbl()
+	{
+		for (size_t i = 0; i < FuncTypeN; i++) {
+			FuncInfo& fi = funcInfoTbl[i];
+			switch (i) {
+			case Inv:
+				fi.constTbl.push_back(f2u(1.0));
+				fi.tmpRegN = 1;
+				fi.tmpMaskN = 0;
+				break;
+			case Exp:
+				fi.constTbl.push_back(f2u(g_expTbl.log2));
+				fi.constTbl.push_back(f2u(g_expTbl.log2_e));
+				for (int j = 0; j < ExpTbl::N; j++) {
+					fi.constTbl.push_back(f2u(g_expTbl.coef[j]));
+				}
+				fi.tmpRegN = ExpTbl::tmpRegN;
+				fi.tmpMaskN = ExpTbl::tmpMaskN;
+				break;
+			case Log:
+				fi.constTbl.push_back(g_logTbl.i127shl23);
+				fi.constTbl.push_back(g_logTbl.x7fffff);
+				fi.constTbl.push_back(g_logTbl.x7fffffff);
+				fi.constTbl.push_back(f2u(g_logTbl.one));
+				fi.constTbl.push_back(f2u(g_logTbl.f1div8));
+				fi.constTbl.push_back(f2u(g_logTbl.log2));
+				fi.constTbl.push_back(f2u(g_logTbl.f2div3));
+				fi.constTbl.push_back(f2u(g_logTbl.log1p5));
+				for (int j = 0; j < LogTbl::N; j++) {
+					fi.constTbl.push_back(f2u(g_logTbl.coef[j]));
+				}
+				fi.tmpRegN = LogTbl::tmpRegN;
+				fi.tmpMaskN = LogTbl::tmpMaskN;
+			default:
+				break;
 			}
 		}
 	}

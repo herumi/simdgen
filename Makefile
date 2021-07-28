@@ -110,7 +110,7 @@ ifeq ($(XBYAK),1)
 endif
 
 ifeq ($(XBYAK_AARCH64),1)
-  CFLAGS+=-I src/aarch64/xbyak_aarch64
+  CFLAGS+=-I src/aarch64/xbyak_aarch64 -std=c++11
   LDFLAGS+=-L src/aarch64/xbyak_aarch64/lib -lxbyak_aarch64
 endif
 
