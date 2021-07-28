@@ -8,6 +8,7 @@ struct ExpTbl {
 	float log2_e;
 	float coef[N];
 	static const int tmpRegN = 2;
+	static const int tmpMaskN = 0;
 	ExpTbl()
 		: log2(std::log(2.0f))
 		, log2_e(1.0f / log2)
@@ -37,6 +38,7 @@ struct LogTbl {
 	float log1p5;
 	float coef[N];
 	static const int tmpRegN = 3;
+	static const int tmpMaskN = 1;
 	LogTbl()
 		: i127shl23(127 << 23)
 		, x7fffff(0x7fffff)

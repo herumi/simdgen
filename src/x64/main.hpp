@@ -84,7 +84,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 					fi.constTbl.push_back(f2u(g_expTbl.coef[j]));
 				}
 				fi.tmpRegN = ExpTbl::tmpRegN;
-				fi.tmpMaskN = 0;
+				fi.tmpMaskN = ExpTbl::tmpMaskN;
 				break;
 			case Log:
 				fi.constTbl.push_back(g_logTbl.i127shl23);
@@ -99,7 +99,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 					fi.constTbl.push_back(f2u(g_logTbl.coef[j]));
 				}
 				fi.tmpRegN = LogTbl::tmpRegN;
-				fi.tmpMaskN = 1;
+				fi.tmpMaskN = LogTbl::tmpMaskN;
 			default:
 				break;
 			}
