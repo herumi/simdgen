@@ -99,6 +99,7 @@ EXE_DIR=bin
 SRC_SRC=main.cpp
 TEST_SRC=parser_test.cpp
 LIB_OBJ=$(OBJ_DIR)/main.o
+
 ifeq ($(CPU),x86-64)
   MCL_USE_XBYAK?=1
   CFLAGS+=-I src/x64
@@ -107,19 +108,17 @@ endif
 ifeq ($(XBYAK),1)
   CFLAGS+=-I ext/xbyak
 endif
+
 ifeq ($(XBYAK_AARCH64),1)
-  CFLAGS+=-I ext/xbyak_aarch64
-  LDFLAGS+=-L ext/xbyak_aarch64/lib -lxbyak_aarch64
+  CFLAGS+=-I src/aarch64/xbyak_aarch64
+  LDFLAGS+=-L src/aarch64/xbyak_aarch64/lib -lxbyak_aarch64
 endif
 
-##################################################################
 SG_LIB=$(LIB_DIR)/libsimdgen.a
 all: $(SG_LIB)
 
 $(SG_LIB): $(LIB_OBJ)
 	$(AR) $@ $(LIB_OBJ)
-
-##################################################################
 
 VPATH=test src
 
