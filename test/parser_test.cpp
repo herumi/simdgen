@@ -91,7 +91,6 @@ CYBOZU_TEST_AUTO(parse)
 
 std::string g_src;
 
-#ifdef SG_X64
 CYBOZU_TEST_AUTO(x64)
 {
 	const char *src = "x*2e3-3.1415";
@@ -99,7 +98,7 @@ CYBOZU_TEST_AUTO(x64)
 		src = g_src.c_str();
 	}
 	SgCode *sg = SgCreate();
-	const SgFuncFloat1* addr = SgGetFuncFloat1(sg, "x", src);
+	SgFuncFloat1* addr = SgGetFuncFloat1(sg, "x", src);
 	const size_t N = 40;
 	float x[N], y[N];
 	for (size_t i = 0; i < N; i++) {
@@ -113,7 +112,6 @@ CYBOZU_TEST_AUTO(x64)
 	printf("\n");
 	SgDestroy(sg);
 }
-#endif
 
 int main(int argc, char *argv[])
 {
