@@ -256,9 +256,9 @@ struct GeneratorBase {
 				fi.tmpMaskN = 0;
 				break;
 			case Exp:
-				fi.constTbl.push_back(f2u(g_expTbl.log2));
 				fi.constTbl.push_back(f2u(g_expTbl.log2_e));
 #ifdef SG_X64
+				fi.constTbl.push_back(f2u(g_expTbl.log2));
 				for (int j = 0; j < ExpTbl::N; j++) {
 					fi.constTbl.push_back(f2u(g_expTbl.coef[j]));
 				}

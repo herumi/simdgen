@@ -85,6 +85,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		b(skip);
 	Label lp = L();
 		ld1w(ZReg(getVarIdx(0)).s, p0, ptr(src));
+		add(src, src, 64);
 		execOneLoop(tl);
 		st1w(ZReg(getTmpIdx(0)).s, p0, ptr(dst));
 		add(dst, dst, 64);
@@ -159,39 +160,33 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	void gen_exp(int inout)
 	{
 		if (debug) printf("exp z%d\n", inout);
-		const ZReg log2(getFloatIdx(g_expTbl.log2));
-		const ZReg log2_e(getFloatIdx(g_expTbl.log2_e));
-		const ZReg tbl[] = {
-			ZReg(getFloatIdx(g_expTbl.coef[0])),
-			ZReg(getFloatIdx(g_expTbl.coef[1])),
-			ZReg(getFloatIdx(g_expTbl.coef[2])),
-			ZReg(getFloatIdx(g_expTbl.coef[3])),
-			ZReg(getFloatIdx(g_expTbl.coef[4])),
-		};
-		const ZReg t0(inout);
+		const ZRegS log2_e(getFloatIdx(g_expTbl.log2_e));
+		const ZRegD not_mask17(getFloatIdx(u2f(g_expTbl.not_mask17)));
+		const ZRegS one(getFloatIdx(g_expTbl.one));
+		const ZRegS coeff1(getFloatIdx(g_expTbl.coeff1));
+		const ZRegS coeff2(getFloatIdx(g_expTbl.coeff2));
+		const ZRegS t0(inout);
 		IndexRangeManager ftr(funcTmpReg_);
-		const ZReg t1(ftr.allocIdx());
-		const ZReg t2(ftr.allocIdx());
+		const ZRegS t1(ftr.allocIdx());
+		const ZRegS t2(ftr.allocIdx());
 
 //		fmin(t0, p0, expMax.s);
 //		fmax(t0, p0, expMin.s);
-		fmul(t0.s, t0, log2_e);
-		movprfx(t1, t0); // clear implicit dependency
+		fmul(t0, t0, log2_e);
+		movprfx(t1, p0, t0); // clear implicit dependency
 		frintm(t1, p0, t0); // floor : float -> float
 		fcvtzs(t2, p0, t1); // n = float -> int
 		fsub(t1, t0, t1); // a
-		fadd(t0, t1, one.s); // b = 1 + a
+		fadd(t0, t1, one); // b = 1 + a
 		lsr(t1, t0, 17); // bL
 		fexpa(t1, t1); // c = fexpa(bL)
 		fscale(t1, p0, t2); // t[i+1] *= 2^n
-		and_(ZRegD(t2.getIdx()), ZRegD(t0.getIdx()), not_mask17.d);
+		and_(ZRegD(t2.getIdx()), ZRegD(t0.getIdx()), not_mask17);
 		fsub(t2, t0, t2); // z
-#if 0
-		movprfx(t0, p0, coeff2.s);
-		fmad(t0, p0, t2, coeff1.s);
-		fmad(t0, p0, t2, one.s);
+		movprfx(t0, p0, coeff2);
+		fmad(t0, p0, t2, coeff1);
+		fmad(t0, p0, t2, one);
 		fmul(t0, t1, t0);
-#endif
 	}
 	void gen_log(int inout)
 	{

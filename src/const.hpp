@@ -3,11 +3,11 @@
 namespace sg {
 
 struct ExpTbl {
-	static const int N = 5;
-	float log2;
 	float log2_e;
 #ifdef SG_X64
+	static const int N = 5;
 	float coef[N];
+	float log2;
 #else
 	uint32_t not_mask17;
 	float one;
@@ -17,9 +17,10 @@ struct ExpTbl {
 	static const int tmpRegN = 2;
 	static const int tmpMaskN = 0;
 	ExpTbl()
-		: log2(std::log(2.0f))
-		, log2_e(1.0f / log2)
-#ifdef SG_AARCH64
+		: log2_e(1.0f / std::log(2.0f))
+#ifdef SG_X64
+		, log2(std::log(2.0f))
+#else
 		, not_mask17(~((1u << 17) - 1))
 		, one(1.0f)
 		, coeff1(0.6931473921)
