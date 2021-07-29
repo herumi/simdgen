@@ -274,9 +274,11 @@ struct GeneratorBase {
 			case Log:
 				fi.constTbl.push_back(g_logTbl.i127shl23);
 				fi.constTbl.push_back(g_logTbl.x7fffff);
+#ifdef SG_X64
 				fi.constTbl.push_back(g_logTbl.x7fffffff);
 				fi.constTbl.push_back(f2u(g_logTbl.one));
 				fi.constTbl.push_back(f2u(g_logTbl.f1div8));
+#endif
 				fi.constTbl.push_back(f2u(g_logTbl.log2));
 				fi.constTbl.push_back(f2u(g_logTbl.f2div3));
 				fi.constTbl.push_back(f2u(g_logTbl.log1p5));

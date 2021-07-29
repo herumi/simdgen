@@ -191,58 +191,56 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	void gen_log(int inout)
 	{
 		printf("gen_log %d\n", inout);
-#if 0
-		const ZReg i127shl23(getFloatIdx(u2f(g_logTbl.i127shl23)));
-		const ZReg x7fffff(getFloatIdx(u2f(g_logTbl.x7fffff)));
-		const ZReg x7fffffff(getFloatIdx(u2f(g_logTbl.x7fffffff)));
-		const ZReg one(getFloatIdx(1.0f));
-		const ZReg f1div8(getFloatIdx(g_logTbl.f1div8));
-		const ZReg f2div3(getFloatIdx(g_logTbl.f2div3));
-		const ZReg log2(getFloatIdx(g_logTbl.log2));
-		const ZReg log1p5(getFloatIdx(g_logTbl.log1p5));
-		const ZReg tbl[] = {
-			ZReg(getFloatIdx(g_logTbl.coef[0])),
-			ZReg(getFloatIdx(g_logTbl.coef[1])),
-			ZReg(getFloatIdx(g_logTbl.coef[2])),
-			ZReg(getFloatIdx(g_logTbl.coef[3])),
-			ZReg(getFloatIdx(g_logTbl.coef[4])),
-			ZReg(getFloatIdx(g_logTbl.coef[5])),
-			ZReg(getFloatIdx(g_logTbl.coef[6])),
-			ZReg(getFloatIdx(g_logTbl.coef[7])),
-			ZReg(getFloatIdx(g_logTbl.coef[8])),
+		const ZRegS i127shl23(getFloatIdx(u2f(g_logTbl.i127shl23)));
+		const ZRegS x7fffff(getFloatIdx(u2f(g_logTbl.x7fffff)));
+		const ZRegS log2(getFloatIdx(g_logTbl.log2));
+		const ZRegS f2div3(getFloatIdx(g_logTbl.f2div3));
+		const ZRegS log1p5(getFloatIdx(g_logTbl.log1p5));
+		const ZRegS coef[] = {
+			ZRegS(getFloatIdx(g_logTbl.coef[0])),
+			ZRegS(getFloatIdx(g_logTbl.coef[1])),
+			ZRegS(getFloatIdx(g_logTbl.coef[2])),
+			ZRegS(getFloatIdx(g_logTbl.coef[3])),
+			ZRegS(getFloatIdx(g_logTbl.coef[4])),
+			ZRegS(getFloatIdx(g_logTbl.coef[5])),
+			ZRegS(getFloatIdx(g_logTbl.coef[6])),
+			ZRegS(getFloatIdx(g_logTbl.coef[7])),
+			ZRegS(getFloatIdx(g_logTbl.coef[8])),
 		};
-		const ZReg t0(inout);
+		const ZRegS t0(inout);
 		IndexRangeManager ftr(funcTmpReg_);
-		const ZReg t1(ftr.allocIdx());
-		const ZReg t2(ftr.allocIdx());
-		const ZReg keep(ftr.allocIdx());
+		const ZRegS t1(ftr.allocIdx());
+		const ZRegS t2(ftr.allocIdx());
+		const ZRegS t3(ftr.allocIdx());
 		IndexRangeManager ftm(funcTmpMask_);
-		const Opmask mask(ftm.allocIdx());
+		const PRegS mask(ftm.allocIdx());
 
-		vmovaps(keep, t0);
-		vpsubd(t1, t0, i127shl23);
-		vpsrad(t1, t1, 23); // e
-		vcvtdq2ps(t1, t1); // float(e)
-		vpandd(t0, t0, x7fffff);
-		vpord(t0, t0, i127shl23); // y
+		mov(t3, p0, t0);
+		sub(t1, t0, i127shl23);
+		asr(t1, t1, 23);
+		// int -> float
+		scvtf(t1, p0, t1);
+		and_(t0, p0, x7fffff);
+		orr(t0, p0, i127shl23);
 
-		vfmsub213ps(t0, f2div3, tbl[0]); // a
-		vfmadd213ps(t1, log2, log1p5); // e
-#if 1
-		vsubps(t2, keep, one);
-		vandps(t2, t2, x7fffffff);
-		vcmpltps(mask, t2, f1div8);
-		vsubps(t0|mask, keep, one);
-		vxorps(t1|mask, t1);
-#endif
+		// fnmsb(a, b, c) = a * b - c
+		fnmsb(t0, p0, f2div3, coef[0]);
+		fmad(t1, p0, log2, log1p5);
 
-		int logN = g_logTbl.N;
-		vmovaps(t2, tbl[logN - 1]);
-		for (int i = logN - 2; i >= 0; i--) {
-			vfmadd213ps(t2, t0, tbl[i]);
+		fsub(t2, t3, coef[0]); // x-1
+		fcpy(t3, p0, 1.0/8);
+		facge(mask, p0, t3, t2); // 1/8 >= abs(x-1)
+		mov(t0, mask, t2);
+		eor(t1, mask, t1);
+		const int logN = LogTbl::N;
+		// fmad(a, b, c) ; a = a * b + c
+		movprfx(t2, p0, coef[logN - 1]);
+		fmad(t2, p0, t0, coef[logN - 2]);
+		for (int j = logN - 3; j >= 0; j--) {
+			fmad(t2, p0, t0, coef[j]);
 		}
-		vfmadd213ps(t0, t2, t1);
-#endif
+		// a * x + e
+		fmad(t0, p0, t2, t1);
 	}
 	void gen_tanh(int inout)
 	{

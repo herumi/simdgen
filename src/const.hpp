@@ -46,21 +46,29 @@ struct LogTbl {
 	static const int N = 9;
 	uint32_t i127shl23;
 	uint32_t x7fffff;
+#ifdef SG_X64
 	uint32_t x7fffffff;
 	float one;
 	float f1div8;
+#endif
 	float log2;
 	float f2div3;
 	float log1p5;
 	float coef[N];
+#ifdef SG_X64
 	static const int tmpRegN = 3;
+#else
+	static const int tmpRegN = 4;
+#endif
 	static const int tmpMaskN = 1;
 	LogTbl()
 		: i127shl23(127 << 23)
 		, x7fffff(0x7fffff)
+#ifdef SG_X64
 		, x7fffffff(0x7fffffff)
 		, one(1.0)
 		, f1div8(1.0f / 8)
+#endif
 		, log2(std::log(2.0f))
 		, f2div3(2.0f / 3)
 		, log1p5(std::log(1.5f))
