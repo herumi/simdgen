@@ -258,9 +258,16 @@ struct GeneratorBase {
 			case Exp:
 				fi.constTbl.push_back(f2u(g_expTbl.log2));
 				fi.constTbl.push_back(f2u(g_expTbl.log2_e));
+#ifdef SG_X64
 				for (int j = 0; j < ExpTbl::N; j++) {
 					fi.constTbl.push_back(f2u(g_expTbl.coef[j]));
 				}
+#else
+				fi.constTbl.push_back(g_expTbl.not_mask17);
+				fi.constTbl.push_back(f2u(g_expTbl.one));
+				fi.constTbl.push_back(f2u(g_expTbl.coeff1));
+				fi.constTbl.push_back(f2u(g_expTbl.coeff2));
+#endif
 				fi.tmpRegN = ExpTbl::tmpRegN;
 				fi.tmpMaskN = ExpTbl::tmpMaskN;
 				break;

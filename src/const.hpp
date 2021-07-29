@@ -6,13 +6,27 @@ struct ExpTbl {
 	static const int N = 5;
 	float log2;
 	float log2_e;
+#ifdef SG_X64
 	float coef[N];
+#else
+	uint32_t not_mask17;
+	float one;
+	float coeff1;
+	float coeff2;
+#endif
 	static const int tmpRegN = 2;
 	static const int tmpMaskN = 0;
 	ExpTbl()
 		: log2(std::log(2.0f))
 		, log2_e(1.0f / log2)
+#ifdef SG_AARCH64
+		, not_mask17(~((1u << 17) - 1))
+		, one(1.0f)
+		, coeff1(0.6931473921)
+		, coeff2(0.2413862043)
+#endif
 	{
+#ifdef SG_X64
 		const uint32_t tbl[N] = {
 			0x3f800000,
 			0x3effff12,
@@ -23,6 +37,7 @@ struct ExpTbl {
 		for (int i = 0; i < N; i++) {
 			coef[i] = u2f(tbl[i]);
 		}
+#endif
 	}
 };
 
