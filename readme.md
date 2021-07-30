@@ -62,6 +62,21 @@ gcc t.c -I ./src -L ./lib -lsimdgen
 89.703 92.422 95.140 97.858 100.576 103.295 106.013 108.731
 ```
 
+## API
+
+### `SGcode* SgCreate()`
+- create an instance of Sgcode and return the pointer.
+- return null if fail.
+
+### `void SgDestroy(SgCreate *sg)`
+- destroy an instance of `sg`.
+
+### `SgFuncFloat1* SgGetFuncFloat1(Sgcode *sg, const char *varName, const char *src)`
+- `sg` generates a code accoring to `varName` and src`.
+- `varName` is a variable name such as `x`.
+- `src` is a single function of `varName` such as `log(exp(x)+1`.
+
+
 ## License
 
 modified new BSD License
