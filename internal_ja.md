@@ -12,9 +12,9 @@
 ```
 include/simdgen/simdgen.h ; 公開ヘッダファイル
 src/const.hpp             ; 関数内で利用する定数
-   /tokenlist.hpp         ; 字句解析で使うもの
+   /tokenlist.hpp         ; 構文解析後のデータを保持
    /parser.hpp            ; 四則演算+αの構文解析
-   /gen.hpp               ; 構文解析の結果に応じて高度生成(共通部分)
+   /gen.hpp               ; 構文解析の結果に応じてコード生成(共通部分)
    /main.cpp              ; APIの実装
    x64/main.hpp           ; AVX-512用コード生成
    aarch64/main.hpp       ; SVE用コード生成
@@ -63,7 +63,7 @@ wc -l
 - 定数`1.0`, `3.141`などを0, 1, 2, ...にする
 
 ### TokenList
-- 字句解析したValueの列を持つ(ValueVec vv)
+- 構文解析したValueの列を持つ(ValueVec vv)
 - 変数名についてのindex
 - どの関数を利用したか
   - 登録する定数が変わるので
