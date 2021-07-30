@@ -64,7 +64,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	{
 		setProtectModeRW();
 	}
-	const SgFuncFloat1* getAddrFloat1() const { return addr_; }
+	SgFuncFloat1* getAddrFloat1() const { return addr_; }
 	void exec(const sg::TokenList& tl)
 	{
 		if (debug) puts("x64/exec");
