@@ -120,7 +120,7 @@ all: $(SG_LIB)
 $(SG_LIB): $(LIB_OBJ)
 	$(AR) $@ $(LIB_OBJ)
 
-VPATH=test src
+VPATH=test src sample
 
 .SUFFIXES: .cpp .d .exe .c .o
 
@@ -130,8 +130,9 @@ $(OBJ_DIR)/%.o: %.cpp
 $(EXE_DIR)/%.exe: $(OBJ_DIR)/%.o $(SG_LIB)
 	$(PRE)$(CXX) $< -o $@ $() $(LDFLAGS)
 
+SAMPLE_SRC=mini.cpp
 SAMPLE_EXE=$(addprefix $(EXE_DIR)/,$(addsuffix .exe,$(basename $(SAMPLE_SRC))))
-sample: $(SAMPLE_EXE) $()
+sample: $(SAMPLE_EXE) $(SG_LIB)
 
 TEST_EXE=$(addprefix $(EXE_DIR)/,$(TEST_SRC:.cpp=.exe))
 test_ci: $(TEST_EXE)
