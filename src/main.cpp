@@ -1,3 +1,4 @@
+#define SG_DLL_EXPORT
 #include "parser.hpp"
 #ifdef SG_X64
 #include "x64/main.hpp"
