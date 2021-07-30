@@ -21,7 +21,7 @@
 		#endif
 	#endif
 	#ifndef SG_NO_AUTOLINK
-//		#pragma comment(lib, "simdgen.lib")
+		#pragma comment(lib, "simdgen.lib")
 	#endif
 #else
 	#define SG_DLL_API
