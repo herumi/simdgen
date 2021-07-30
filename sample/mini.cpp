@@ -32,13 +32,13 @@ int main()
 		applyC(y1, x, N);
 	}
 	end = clock();
-	printf("C  %5.2f usec\n", (end - begin) / (double)CLOCKS_PER_SEC / C * 1e6);
+	printf("C  %6.2f usec\n", (end - begin) / (double)CLOCKS_PER_SEC / C * 1e6);
 	begin = clock();
 	for (size_t i = 0; i < C; i++) {
 		addr(y2, x, N);
 	}
 	end = clock();
-	printf("sg %5.2f usec\n", (end - begin) / (double)CLOCKS_PER_SEC / C * 1e6);
+	printf("sg %6.2f usec\n", (end - begin) / (double)CLOCKS_PER_SEC / C * 1e6);
 	for (size_t i = 0; i < 20; i++) {
 		printf("%zd x=%f C=%f sg=%f diff=%e\n", i, x[i], y1[i], y2[i], fabs(y1[i] - y2[i]));
 	}
