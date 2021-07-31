@@ -1,4 +1,4 @@
-# simdgen ; a simple code generator for x64 AVX-512/AArch64 SVE
+# simdgen ; a simple code generator for x64 AVX-512/AArch64 SVE (beta version)
 
 ## Abstract
 
@@ -76,6 +76,12 @@ gcc t.c -I ./src -L ./lib -lsimdgen
 - `varName` is a variable name such as `x`.
 - `src` is a single function of `varName` such as `log(exp(x)+1`.
 
+## Support functions
+
+- arithmetic operations (`+`, `-`, `\*`, `/`)
+- inv
+- exp
+- log
 
 ## License
 
@@ -83,6 +89,7 @@ modified new BSD License
 http://opensource.org/licenses/BSD-3-Clause
 
 ## History
+2021/Jul/29 public
 
 ## Author
 MITSUNARI Shigeo(herumi@nifty.com)
