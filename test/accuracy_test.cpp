@@ -7,6 +7,37 @@
 typedef std::vector<float> floatVec;
 const float MAX_E = 1e-6;
 
+void loop(float (*f)(float), float *dst, const float *src, size_t n)
+{
+	for (size_t i = 0; i < n; i++) {
+		dst[i] = f(src[i]);
+	}
+}
+
+void bench(const char *msg, float (*f)(float), SgFuncFloat1 *g)
+{
+	printf("%s\n", msg);
+	clock_t begin, end;
+	const size_t N = 4000;
+	const size_t C = 10000;
+	static float x[N], y1[N], y2[N];
+	for (size_t i = 0; i < N; i++) {
+		x[i] = 5 + sin(i / 3.141592) * 2;
+	}
+	begin = clock();
+	for (size_t i = 0; i < C; i++) {
+		loop(f, y1, x, N);
+	}
+	end = clock();
+	printf("C  %6.2f usec\n", (end - begin) / (double)CLOCKS_PER_SEC / C * 1e6);
+	begin = clock();
+	for (size_t i = 0; i < C; i++) {
+		g(y2, x, N);
+	}
+	end = clock();
+	printf("sg %6.2f usec\n", (end - begin) / (double)CLOCKS_PER_SEC / C * 1e6);
+}
+
 float diff(float x, float y)
 {
 	float d = std::fabs(x - y);
@@ -82,6 +113,7 @@ CYBOZU_TEST_AUTO(exp)
 	checkRange(expf, addr, -3, -2, 1e-4);
 	checkRange(expf, addr, 0, 1, 1e-4);
 	checkRange(expf, addr, 10, 11, 1e-4);
+	bench("exp", expf, addr);
 	SgDestroy(sg);
 }
 
@@ -97,6 +129,7 @@ CYBOZU_TEST_AUTO(log)
 	checkRange(logf, addr, 1 - 1e-5, 1 + 1e-5, 1e-7);
 	checkRange(logf, addr, 10, 11, 1e-4);
 	checkRange(logf, addr, 1000, 1000 + 1, 1e-4);
+	bench("log", logf, addr);
 	SgDestroy(sg);
 }
 
