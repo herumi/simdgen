@@ -76,7 +76,7 @@ CYBOZU_TEST_AUTO(exp)
 	SgCode *sg = SgCreate();
 	SgFuncFloat1 *addr = SgGetFuncFloat1(sg, "x", "exp(x)");
 	const float limitTbl[] = {
-		-FLT_MAX, -1000, -100, -80, -5.3, -1, -FLT_MIN, 0, FLT_MIN, 0.5, 1,  5.3, 80 //, 100, 1000, FLT_MAX
+		-1000, -100, -80, -5.3, -1, -FLT_MIN, 0, FLT_MIN, 0.5, 1,  5.3, 80 //, 100, 1000, FLT_MAX
 	};
 	checkTable(expf, addr, limitTbl);
 	checkRange(expf, addr, -3, -2, 1e-4);
