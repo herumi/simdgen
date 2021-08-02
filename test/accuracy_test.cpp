@@ -85,3 +85,18 @@ CYBOZU_TEST_AUTO(exp)
 	SgDestroy(sg);
 }
 
+CYBOZU_TEST_AUTO(log)
+{
+	SgCode *sg = SgCreate();
+	SgFuncFloat1 *addr = SgGetFuncFloat1(sg, "x", "log(x)");
+	const float limitTbl[] = {
+		FLT_MIN, 0.5, 1,  5.3, 80, 100, 1000, FLT_MAX
+	};
+	checkTable(logf, addr, limitTbl);
+	checkRange(logf, addr, FLT_MIN, 1, 1e-4);
+	checkRange(logf, addr, 1 - 1e-5, 1 + 1e-5, 1e-7);
+	checkRange(logf, addr, 10, 11, 1e-4);
+	checkRange(logf, addr, 1000, 1000 + 1, 1e-4);
+	SgDestroy(sg);
+}
+
