@@ -13,19 +13,29 @@ float diff(float x, float y)
 	return std::fabs(x) < 1e-10 ? d : d / x;
 }
 
-template<class F, class G>
-void checkRange(const F& f, const G& g, float begin, float end, float step)
+void checkRange(float (*f)(float), SgFuncFloat1 *g, float begin, float end, float step)
 {
+	floatVec dst, src;
 	float maxe = 0;
 	float maxx = 0;
 	double ave = 0;
 	int aveN = 0;
-	for (float x = begin; x < end; x += step) {
+	size_t n = size_t((end - begin) / step);
+	src.resize(n);
+	dst.resize(n);
+	for (size_t i = 0; i < n; i++) {
+		src[i] = begin;
+		begin += step;
+	}
+	g(&dst[0], &src[0], n);
+
+	for (size_t i = 0; i < n; i++) {
+		float x = src[i];
 		float y0 = f(x);
-		float y1 = g(x);
+		float y1 = dst[i];
 		float e;
 		e = diff(y0, y1);
-		if (e > MAX_E) {
+		if (!(e <= MAX_E)) {
 			printf("err x=%e y0=%e y1=%e e=%e\n", x, y0, y1, e);
 		}
 		if (e > maxe) {
@@ -54,10 +64,10 @@ void checkTable(float (*f)(float), SgFuncFloat1 *g, const float (&tbl)[N])
 		float y1 = dst[i];
 		float e;
 		e = diff(y0, y1);
-//		if (e > MAX_E) {
+		CYBOZU_TEST_ASSERT(e <= MAX_E);
+		if (!(e < MAX_E)) {
 			printf("err x=%e y0=%e y1=%e e=%e\n", x, y0, y1, e);
-			CYBOZU_TEST_ASSERT(e <= MAX_E);
-//		}
+		}
 	}
 }
 
@@ -69,9 +79,9 @@ CYBOZU_TEST_AUTO(exp)
 		-FLT_MAX, -1000, -100, -80, -5.3, -1, -FLT_MIN, 0, FLT_MIN, 0.5, 1,  5.3, 80 //, 100, 1000, FLT_MAX
 	};
 	checkTable(expf, addr, limitTbl);
-
-//	checkRange(expf, addr, 0, 1, 1e-4);	
-
+	checkRange(expf, addr, -3, -2, 1e-4);
+	checkRange(expf, addr, 0, 1, 1e-4);
+	checkRange(expf, addr, 10, 11, 1e-4);
 	SgDestroy(sg);
 }
 
