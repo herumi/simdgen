@@ -52,7 +52,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		, dataReg_(x3)
 		, tmpX_(x4)
 		, tmpW_(w4)
-		, debug(true)
+		, debug(false)
 	{
 		simdByte_ = 512 / 8;
 		setFuncInfoTbl();
