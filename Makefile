@@ -97,7 +97,7 @@ LIB_DIR=lib
 OBJ_DIR=obj
 EXE_DIR=bin
 SRC_SRC=main.cpp
-TEST_SRC=parser_test.cpp
+TEST_SRC=parser_test.cpp accuracy_test.cpp
 LIB_OBJ=$(OBJ_DIR)/main.o
 
 ifeq ($(CPU),x86-64)
