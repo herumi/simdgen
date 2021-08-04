@@ -66,6 +66,7 @@ struct GeneratorBase {
 	Index<uint32_t> constIdx_;
 	FuncInfo funcInfoTbl[FuncTypeN];
 	int simdByte_;
+	int unrollN_;
 	uint32_t varN_; // # variables
 	uint32_t constN_; // # constants
 	IndexRange funcTmpReg_;
@@ -75,6 +76,7 @@ struct GeneratorBase {
 	bool print_;
 	GeneratorBase()
 		: simdByte_(32 / 8) // one float
+		, unrollN_(1)
 		, varN_(0)
 		, constN_(0)
 		, maxTmpN_(0)
@@ -123,11 +125,11 @@ struct GeneratorBase {
 			funcTmpReg_.updateMax(fi.tmpRegN);
 			funcTmpMask_.updateMax(fi.tmpMaskN);
 		}
-		varN_ = tl.getVarNum();
+		varN_ = tl.getVarNum() * unrollN_;
 		constN_ = constIdx_.size();
 		funcTmpReg_.setOffset(varN_ + constN_);
-		funcTmpMask_.setOffset(2); // mask0 and mask1 are reserved
-		maxTmpN_ = tl.getMaxTmpNum();
+		funcTmpMask_.setOffset(1 + unrollN_); // mask0 and mask1 are reserved
+		maxTmpN_ = tl.getMaxTmpNum() * unrollN_;
 		printf("varN=%d constN=%d funcTmpReg.max=%d maxTmpN=%d\n", varN_, constN_, funcTmpReg_.getMax(), maxTmpN_);
 		if (varN_ + constN_ + maxTmpN_ > 32) {
 			throw cybozu::Exception("too many registers");

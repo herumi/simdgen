@@ -7,6 +7,9 @@
 using namespace Xbyak;
 using namespace Xbyak::util;
 
+typedef std::vector<Zmm> ZmmVec;
+typedef std::vector<Opmask> OpmaskVec;
+
 namespace sg {
 
 const int freeTbl[] = {
@@ -93,24 +96,43 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			dataReg_ = sf.t[0];
 			mov(dataReg_, (size_t)dataL.getAddress());
 			gen_setConst();
-			test(n, n);
-			Label mod16, exit;
-			mov(ecx, n);
-			and_(n, ~15u);
-			jz(mod16, T_NEAR);
+
+			Label cmp1L, cmp2L, exitL;
+			jmp(cmp1L, T_NEAR);
 			puts("execOneLoop lp");
-		Label lp = L();
+		Label lp1 = L();
+			for (int i = 0; i < unrollN_; i++) {
+				vmovups(Zmm(getVarIdx(i)), ptr[src + i * simdByte_]);
+			}
+			execOneLoop(tl);
+			for (int i = 0; i < unrollN_; i++) {
+				vmovups(ptr[dst + i * simdByte_], Zmm(getTmpIdx(i)));
+			}
+			add(src, 64 * unrollN_);
+			add(dst, 64 * unrollN_);
+			sub(n, 16 * unrollN_);
+		L(cmp1L);
+			cmp(n, 16  * unrollN_);
+			jge(lp1, T_NEAR);
+			puts("execOneLoop remain");
+			jmp(cmp2L, T_NEAR);
+
+			unrollN_ = 1;
+		Label lp2 = L();
 			vmovups(Zmm(getVarIdx(0)), ptr[src]);
 			execOneLoop(tl);
 			vmovups(ptr[dst], Zmm(getTmpIdx(0)));
 			add(src, 64);
 			add(dst, 64);
 			sub(n, 16);
-			jnz(lp, T_NEAR);
-		L(mod16);
-			puts("execOneLoop mod16");
-			and_(ecx, 15);
-			jz(exit, T_NEAR);
+		L(cmp2L);
+			cmp(n, 16);
+			jge(lp2, T_NEAR);
+
+			mov(ecx, n);
+			test(ecx, ecx);
+			jz(exitL, T_NEAR);
+
 			mov(eax, 1);
 			shl(eax, cl);
 			sub(eax, 1);
@@ -118,7 +140,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			vmovups(Zmm(getVarIdx(0))|k1|T_z, ptr[src]);
 			execOneLoop(tl);
 			vmovups(ptr[dst]|k1, Zmm(getTmpIdx(0)));
-		L(exit);
+		L(exitL);
 			// restore regs
 			for (int i = 0; i < keepN_; i++) {
 				vmovups(Zmm(saveTbl[i]), ptr[rsp + i * simdByte_]);
@@ -140,32 +162,44 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	void gen_copy(int dst, int src)
 	{
 		if (debug) printf("vmovaps z%d, z%d\n", dst, src);
-		vmovaps(Zmm(dst), Zmm(src));
+		for (int i = 0; i < unrollN_; i++) {
+			vmovaps(Zmm(dst + i), Zmm(src + i));
+		}
 	}
 	void gen_add(int dst, int src1, int src2)
 	{
 		if (debug) printf("vaddps z%d, z%d, z%d\n", dst, src1, src2);
-		vaddps(Zmm(dst), Zmm(src1), Zmm(src2));
+		for (int i = 0; i < unrollN_; i++) {
+			vaddps(Zmm(dst + i), Zmm(src1 + i), Zmm(src2 + i));
+		}
 	}
 	void gen_sub(int dst, int src1, int src2)
 	{
 		if (debug) printf("vsubps z%d, z%d, z%d\n", dst, src1, src2);
-		vsubps(Zmm(dst), Zmm(src1), Zmm(src2));
+		for (int i = 0; i < unrollN_; i++) {
+			vsubps(Zmm(dst + i), Zmm(src1 + i), Zmm(src2 + i));
+		}
 	}
 	void gen_mul(int dst, int src1, int src2)
 	{
 		if (debug) printf("vmulps z%d, z%d, z%d\n", dst, src1, src2);
-		vmulps(Zmm(dst), Zmm(src1), Zmm(src2));
+		for (int i = 0; i < unrollN_; i++) {
+			vmulps(Zmm(dst + i), Zmm(src1 + i), Zmm(src2 + i));
+		}
 	}
 	void gen_div(int dst, int src1, int src2)
 	{
 		if (debug) printf("vdivps z%d, z%d, z%d\n", dst, src1, src2);
-		vdivps(Zmm(dst), Zmm(src1), Zmm(src2));
+		for (int i = 0; i < unrollN_; i++) {
+			vdivps(Zmm(dst + i), Zmm(src1 + i), Zmm(src2 + i));
+		}
 	}
 	void gen_inv(int inout)
 	{
 		if (debug) printf("inv z%d\n", inout);
-		vdivps(Zmm(inout), Zmm(getConstIdx(f2u(1.0))), Zmm(inout));
+		for (int i = 0; i < unrollN_; i++) {
+			vdivps(Zmm(inout + i), Zmm(getConstIdx(f2u(1.0))), Zmm(inout + i));
+		}
 	}
 	void gen_exp(int inout)
 	{
@@ -179,22 +213,26 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			Zmm(getFloatIdx(g_expTbl.coef[3])),
 			Zmm(getFloatIdx(g_expTbl.coef[4])),
 		};
-		const Zmm t0(inout);
 		IndexRangeManager ftr(funcTmpReg_);
-		const Zmm t1(ftr.allocIdx());
-		const Zmm t2(ftr.allocIdx());
+		ZmmVec t0, t1, t2;
+		const int n = unrollN_;
+		for (int i = 0; i < n; i++) {
+			t0.push_back(Zmm(inout + i));
+			t1.push_back(Zmm(ftr.allocIdx()));
+			t2.push_back(Zmm(ftr.allocIdx()));
+		}
 
-		vmulps(t0, log2_e);
-		vrndscaleps(t1, t0, 0); // n = round(x)
-		vsubps(t0, t1); // a
-		vmulps(t0, log2);
-		vmovaps(t2, tbl[4]);
-		vfmadd213ps(t2, t0, tbl[3]);
-		vfmadd213ps(t2, t0, tbl[2]);
-		vfmadd213ps(t2, t0, tbl[1]);
-		vfmadd213ps(t2, t0, tbl[0]);
-		vfmadd213ps(t2, t0, tbl[0]);
-		vscalefps(t0, t2, t1); // t2 * 2^t1
+		for (int i = 0; i < n; i++) vmulps(t0[i], log2_e);
+		for (int i = 0; i < n; i++) vrndscaleps(t1[i], t0[i], 0); // n = round(x)
+		for (int i = 0; i < n; i++) vsubps(t0[i], t1[i]); // a
+		for (int i = 0; i < n; i++) vmulps(t0[i], log2);
+		for (int i = 0; i < n; i++) vmovaps(t2[i], tbl[4]);
+		for (int i = 0; i < n; i++) vfmadd213ps(t2[i], t0[i], tbl[3]);
+		for (int i = 0; i < n; i++) vfmadd213ps(t2[i], t0[i], tbl[2]);
+		for (int i = 0; i < n; i++) vfmadd213ps(t2[i], t0[i], tbl[1]);
+		for (int i = 0; i < n; i++) vfmadd213ps(t2[i], t0[i], tbl[0]);
+		for (int i = 0; i < n; i++) vfmadd213ps(t2[i], t0[i], tbl[0]);
+		for (int i = 0; i < n; i++) vscalefps(t0[i], t2[i], t1[i]); // t2 * 2^t1
 	}
 	void gen_log(int inout)
 	{
@@ -218,37 +256,42 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			Zmm(getFloatIdx(g_logTbl.coef[7])),
 			Zmm(getFloatIdx(g_logTbl.coef[8])),
 		};
-		const Zmm t0(inout);
 		IndexRangeManager ftr(funcTmpReg_);
-		const Zmm t1(ftr.allocIdx());
-		const Zmm t2(ftr.allocIdx());
-		const Zmm keep(ftr.allocIdx());
 		IndexRangeManager ftm(funcTmpMask_);
-		const Opmask mask(ftm.allocIdx());
+		ZmmVec t0, t1, t2, keep;
+		OpmaskVec mask;
+		const int n = unrollN_;
+		for (int i = 0; i < n; i++) {
+			t0.push_back(Zmm(inout + i));
+			t1.push_back(Zmm(ftr.allocIdx()));
+			t2.push_back(Zmm(ftr.allocIdx()));
+			keep.push_back(Zmm(ftr.allocIdx()));
+			mask.push_back(Opmask(ftm.allocIdx()));
+		}
 
-		vmovaps(keep, t0);
-		vpsubd(t1, t0, i127shl23);
-		vpsrad(t1, t1, 23); // e
-		vcvtdq2ps(t1, t1); // float(e)
-		vpandd(t0, t0, x7fffff);
-		vpord(t0, t0, i127shl23); // y
+		for (int i = 0; i < n; i++) vmovaps(keep[i], t0[i]);
+		for (int i = 0; i < n; i++) vpsubd(t1[i], t0[i], i127shl23);
+		for (int i = 0; i < n; i++) vpsrad(t1[i], t1[i], 23); // e
+		for (int i = 0; i < n; i++) vcvtdq2ps(t1[i], t1[i]); // float(e)
+		for (int i = 0; i < n; i++) vpandd(t0[i], t0[i], x7fffff);
+		for (int i = 0; i < n; i++) vpord(t0[i], t0[i], i127shl23); // y
 
-		vfmsub213ps(t0, f2div3, tbl[0]); // a
-		vfmadd213ps(t1, log2, log1p5); // e
+		for (int i = 0; i < n; i++) vfmsub213ps(t0[i], f2div3, tbl[0]); // a
+		for (int i = 0; i < n; i++) vfmadd213ps(t1[i], log2, log1p5); // e
 #if 1
-		vsubps(t2, keep, one);
-		vandps(t2, t2, x7fffffff);
-		vcmpltps(mask, t2, f1div8);
-		vsubps(t0|mask, keep, one);
-		vxorps(t1|mask, t1);
+		for (int i = 0; i < n; i++) vsubps(t2[i], keep[i], one);
+		for (int i = 0; i < n; i++) vandps(t2[i], t2[i], x7fffffff);
+		for (int i = 0; i < n; i++) vcmpltps(mask[i], t2[i], f1div8);
+		for (int i = 0; i < n; i++) vsubps(t0[i]|mask[i], keep[i], one);
+		for (int i = 0; i < n; i++) vxorps(t1[i]|mask[i], t1[i]);
 #endif
 
 		int logN = g_logTbl.N;
-		vmovaps(t2, tbl[logN - 1]);
-		for (int i = logN - 2; i >= 0; i--) {
-			vfmadd213ps(t2, t0, tbl[i]);
+		for (int i = 0; i < n; i++) vmovaps(t2[i], tbl[logN - 1]);
+		for (int j = logN - 2; j >= 0; j--) {
+			for (int i = 0; i < n; i++) vfmadd213ps(t2[i], t0[i], tbl[j]);
 		}
-		vfmadd213ps(t0, t2, t1);
+		for (int i = 0; i < n; i++) vfmadd213ps(t0[i], t2[i], t1[i]);
 	}
 	void gen_tanh(int inout)
 	{
