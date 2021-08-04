@@ -129,6 +129,9 @@ struct GeneratorBase {
 		funcTmpMask_.setOffset(2); // mask0 and mask1 are reserved
 		maxTmpN_ = tl.getMaxTmpNum();
 		printf("varN=%d constN=%d funcTmpReg.max=%d maxTmpN=%d\n", varN_, constN_, funcTmpReg_.getMax(), maxTmpN_);
+		if (varN_ + constN_ + maxTmpN_ > 32) {
+			throw cybozu::Exception("too many registers");
+		}
 	}
 	void gen_setConst()
 	{
