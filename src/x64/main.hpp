@@ -117,17 +117,20 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			puts("execOneLoop remain");
 			jmp(cmp2L, T_NEAR);
 
+			if (unrollN_ > 2) {
+				unrollN_ = 1;
+			Label lp2 = L();
+				vmovups(Zmm(getVarIdx(0)), ptr[src]);
+				execOneLoop(tl);
+				vmovups(ptr[dst], Zmm(getTmpIdx(0)));
+				add(src, 64);
+				add(dst, 64);
+				sub(n, 16);
+			L(cmp2L);
+				cmp(n, 16);
+				jge(lp2, T_NEAR);
+			}
 			unrollN_ = 1;
-		Label lp2 = L();
-			vmovups(Zmm(getVarIdx(0)), ptr[src]);
-			execOneLoop(tl);
-			vmovups(ptr[dst], Zmm(getTmpIdx(0)));
-			add(src, 64);
-			add(dst, 64);
-			sub(n, 16);
-		L(cmp2L);
-			cmp(n, 16);
-			jge(lp2, T_NEAR);
 
 			mov(ecx, n);
 			test(ecx, ecx);

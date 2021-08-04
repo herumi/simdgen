@@ -125,6 +125,8 @@ struct GeneratorBase {
 			funcTmpReg_.updateMax(fi.tmpRegN);
 			funcTmpMask_.updateMax(fi.tmpMaskN);
 		}
+		funcTmpReg_.updateMax(funcTmpReg_.getMax() * unrollN_);
+		funcTmpMask_.updateMax(funcTmpMask_.getMax() * unrollN_);
 		varN_ = tl.getVarNum() * unrollN_;
 		constN_ = constIdx_.size();
 		funcTmpReg_.setOffset(varN_ + constN_);
