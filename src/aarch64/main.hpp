@@ -7,6 +7,9 @@
 
 using namespace Xbyak_aarch64;
 
+typedef std::vector<ZRegS> ZRegSVec;
+typedef std::vector<PRegS> PRegSVec;
+
 namespace sg {
 
 const int freeTbl[] = {
@@ -84,14 +87,18 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		Label skip;
 		b(skip);
 	Label lp = L();
-		ld1w(ZReg(getVarIdx(0)).s, p0, ptr(src));
-		add(src, src, 64);
+		for (int i = 0; i < unrollN_; i++) {
+			ld1w(ZReg(getVarIdx(i)).s, p0, ptr(src, i));
+		}
+		add(src, src, 64 * unrollN_);
 		execOneLoop(tl);
-		st1w(ZReg(getTmpIdx(0)).s, p0, ptr(dst));
-		add(dst, dst, 64);
-		sub(n, n, 16);
+		for (int i = 0; i < unrollN_; i++) {
+			st1w(ZReg(getTmpIdx(i)).s, p0, ptr(dst, i));
+		}
+		add(dst, dst, 64 * unrollN_);
+		sub(n, n, 16 * unrollN_);
 	L(skip);
-		cmp(n, 16);
+		cmp(n, 16 * unrollN_);
 		bge(lp);
 
 		Label cond;
@@ -126,36 +133,48 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	void gen_copy(int dst, int src)
 	{
 		if (debug) printf("mov z%d, z%d\n", dst, src);
-		mov(ZReg(dst).s, p0, ZReg(src).s);
+		for (int i = 0; i < unrollN_; i++) {
+			mov(ZReg(dst + i).s, p0, ZReg(src + i).s);
+		}
 	}
 	void gen_add(int dst, int src1, int src2)
 	{
 		if (debug) printf("fadd z%d, z%d, z%d\n", dst, src1, src2);
-		fadd(ZReg(dst).s, ZReg(src1).s, ZReg(src2).s);
+		for (int i = 0; i < unrollN_; i++) {
+			fadd(ZReg(dst + i).s, ZReg(src1 + i).s, ZReg(src2 + i).s);
+		}
 	}
 	void gen_sub(int dst, int src1, int src2)
 	{
 		if (debug) printf("fsub z%d, z%d, z%d\n", dst, src1, src2);
-		fsub(ZReg(dst).s, ZReg(src1).s, ZReg(src2).s);
+		for (int i = 0; i < unrollN_; i++) {
+			fsub(ZReg(dst + i).s, ZReg(src1 + i).s, ZReg(src2 + i).s);
+		}
 	}
 	void gen_mul(int dst, int src1, int src2)
 	{
 		if (debug) printf("fmul z%d, z%d, z%d\n", dst, src1, src2);
-		fmul(ZReg(dst).s, ZReg(src1).s, ZReg(src2).s);
+		for (int i = 0; i < unrollN_; i++) {
+			fmul(ZReg(dst + i).s, ZReg(src1 + i).s, ZReg(src2 + i).s);
+		}
 	}
 	void gen_div(int dst, int src1, int src2)
 	{
 		if (debug) printf("fdiv z%d, z%d, z%d\n", dst, src1, src2);
-		movprfx(ZReg(dst), ZReg(src1));
-		fdiv(ZReg(dst).s, p0, ZReg(src2).s);
+		for (int i = 0; i < unrollN_; i++) {
+			movprfx(ZReg(dst + i), ZReg(src1 + i));
+			fdiv(ZReg(dst + i).s, p0, ZReg(src2 + i).s);
+		}
 	}
 	void gen_inv(int inout)
 	{
 		if (debug) printf("inv z%d\n", inout);
 		IndexRangeManager ftr(funcTmpReg_);
 		const ZReg t1(ftr.allocIdx());
-		fcpy(t1.s, p0, 1.0);
-		fdivr(ZReg(inout).s, p0, t1.s);
+		for (int i = 0; i < unrollN_; i++) {
+			fcpy(t1.s, p0, 1.0);
+			fdivr(ZReg(inout + i).s, p0, t1.s);
+		}
 	}
 	void gen_exp(int inout)
 	{
@@ -165,28 +184,36 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		const ZRegS one(getFloatIdx(g_expTbl.one));
 		const ZRegS coeff1(getFloatIdx(g_expTbl.coeff1));
 		const ZRegS coeff2(getFloatIdx(g_expTbl.coeff2));
-		const ZRegS t0(inout);
 		IndexRangeManager ftr(funcTmpReg_);
-		const ZRegS t1(ftr.allocIdx());
-		const ZRegS t2(ftr.allocIdx());
+		ZRegSVec t0, t1, t2;
+		const int n = unrollN_;
+		for (int i = 0; i < n; i++) {
+			t0.push_back(ZRegS(inout + i));
+			t1.push_back(ZRegS(ftr.allocIdx()));
+			t2.push_back(ZRegS(ftr.allocIdx()));
+		}
 
 //		fmin(t0, p0, expMax.s);
 //		fmax(t0, p0, expMin.s);
-		fmul(t0, t0, log2_e);
-		movprfx(t1, p0, t0); // clear implicit dependency
-		frintm(t1, p0, t0); // floor : float -> float
-		fcvtzs(t2, p0, t1); // n = float -> int
-		fsub(t1, t0, t1); // a
-		fadd(t0, t1, one); // b = 1 + a
-		lsr(t1, t0, 17); // bL
-		fexpa(t1, t1); // c = fexpa(bL)
-		fscale(t1, p0, t2); // t[i+1] *= 2^n
-		and_(ZRegD(t2.getIdx()), ZRegD(t0.getIdx()), not_mask17);
-		fsub(t2, t0, t2); // z
-		movprfx(t0, p0, coeff2);
-		fmad(t0, p0, t2, coeff1);
-		fmad(t0, p0, t2, one);
-		fmul(t0, t1, t0);
+		for (int i = 0; i < n; i++) fmul(t0[i], t0[i], log2_e);
+		for (int i = 0; i < n; i++) {
+			movprfx(t1[i], p0, t0[i]); // clear implicit dependency
+			frintm(t1[i], p0, t0[i]); // floor : float -> float
+		}
+		for (int i = 0; i < n; i++) fcvtzs(t2[i], p0, t1[i]); // n = float -> int
+		for (int i = 0; i < n; i++) fsub(t1[i], t0[i], t1[i]); // a
+		for (int i = 0; i < n; i++) fadd(t0[i], t1[i], one); // b = 1 + a
+		for (int i = 0; i < n; i++) lsr(t1[i], t0[i], 17); // bL
+		for (int i = 0; i < n; i++) fexpa(t1[i], t1[i]); // c = fexpa(bL)
+		for (int i = 0; i < n; i++) fscale(t1[i], p0, t2[i]); // t[i+1] *= 2^n
+		for (int i = 0; i < n; i++) and_(ZRegD(t2[i].getIdx()), ZRegD(t0[i].getIdx()), not_mask17);
+		for (int i = 0; i < n; i++) fsub(t2[i], t0[i], t2[i]); // z
+		for (int i = 0; i < n; i++) {
+			movprfx(t0[i], p0, coeff2);
+			fmad(t0[i], p0, t2[i], coeff1);
+		}
+		for (int i = 0; i < n; i++) fmad(t0[i], p0, t2[i], one);
+		for (int i = 0; i < n; i++) fmul(t0[i], t1[i], t0[i]);
 	}
 	void gen_log(int inout)
 	{
@@ -207,40 +234,51 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			ZRegS(getFloatIdx(g_logTbl.coef[7])),
 			ZRegS(getFloatIdx(g_logTbl.coef[8])),
 		};
-		const ZRegS t0(inout);
 		IndexRangeManager ftr(funcTmpReg_);
-		const ZRegS t1(ftr.allocIdx());
-		const ZRegS t2(ftr.allocIdx());
-		const ZRegS t3(ftr.allocIdx());
 		IndexRangeManager ftm(funcTmpMask_);
-		const PRegS mask(ftm.allocIdx());
+		ZRegSVec t0, t1, t2, t3;
+		PRegSVec mask;
+		const int n = unrollN_;
+		for (int i = 0; i < n; i++) {
+			t0.push_back(ZRegS(inout + i));
+			t1.push_back(ZRegS(ftr.allocIdx()));
+			t2.push_back(ZRegS(ftr.allocIdx()));
+			t3.push_back(ZRegS(ftr.allocIdx()));
+			mask.push_back(PRegS(ftm.allocIdx()));
+		}
 
-		mov(t3, p0, t0);
-		sub(t1, t0, i127shl23);
-		asr(t1, t1, 23);
+		for (int i = 0; i < n; i++) mov(t3[i], p0, t0[i]);
+		for (int i = 0; i < n; i++) sub(t1[i], t0[i], i127shl23);
+		for (int i = 0; i < n; i++) asr(t1[i], t1[i], 23);
 		// int -> float
-		scvtf(t1, p0, t1);
-		and_(t0, p0, x7fffff);
-		orr(t0, p0, i127shl23);
+		for (int i = 0; i < n; i++) scvtf(t1[i], p0, t1[i]);
+		for (int i = 0; i < n; i++) and_(t0[i], p0, x7fffff);
+		for (int i = 0; i < n; i++) orr(t0[i], p0, i127shl23);
 
 		// fnmsb(a, b, c) = a * b - c
-		fnmsb(t0, p0, f2div3, coef[0]);
-		fmad(t1, p0, log2, log1p5);
+		for (int i = 0; i < n; i++) fnmsb(t0[i], p0, f2div3, coef[0]);
+		for (int i = 0; i < n; i++) fmad(t1[i], p0, log2, log1p5);
 
-		fsub(t2, t3, coef[0]); // x-1
-		fcpy(t3, p0, 1.0/8);
-		facge(mask, p0, t3, t2); // 1/8 >= abs(x-1)
-		mov(t0, mask, t2);
-		eor(t1, mask, t1);
+		for (int i = 0; i < n; i++) fsub(t2[i], t3[i], coef[0]); // x-1
+		for (int i = 0; i < n; i++) fcpy(t3[i], p0, 1.0/8);
+		for (int i = 0; i < n; i++) {
+			facge(mask[i], p0, t3[i], t2[i]); // 1/8 >= abs(x-1)
+			mov(t0[i], mask[i], t2[i]);
+			eor(t1[i], mask[i], t1[i]);
+		}
 		const int logN = LogTbl::N;
 		// fmad(a, b, c) ; a = a * b + c
-		movprfx(t2, p0, coef[logN - 1]);
-		fmad(t2, p0, t0, coef[logN - 2]);
+		for (int i = 0; i < n; i++) {
+			movprfx(t2[i], p0, coef[logN - 1]);
+			fmad(t2[i], p0, t0[i], coef[logN - 2]);
+		}
 		for (int j = logN - 3; j >= 0; j--) {
-			fmad(t2, p0, t0, coef[j]);
+			for (int i = 0; i < n; i++) {
+				fmad(t2[i], p0, t0[i], coef[j]);
+			}
 		}
 		// a * x + e
-		fmad(t0, p0, t2, t1);
+		for (int i = 0; i < n; i++) fmad(t0[i], p0, t2[i], t1[i]);
 	}
 	void gen_tanh(int inout)
 	{

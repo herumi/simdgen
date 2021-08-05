@@ -76,7 +76,7 @@ struct GeneratorBase {
 	bool print_;
 	GeneratorBase()
 		: simdByte_(32 / 8) // one float
-		, unrollN_(1)
+		, unrollN_(2)
 		, varN_(0)
 		, constN_(0)
 		, maxTmpN_(0)
