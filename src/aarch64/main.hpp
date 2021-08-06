@@ -91,7 +91,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			ld1w(ZReg(getVarIdx(i)).s, p0, ptr(src, i));
 		}
 		add(src, src, 64 * unrollN_);
-		execOneLoop(tl);
+		execOneLoop(tl, unrollN_);
 		for (int i = 0; i < unrollN_; i++) {
 			st1w(ZReg(getTmpIdx(i)).s, p0, ptr(dst, i));
 		}
@@ -106,7 +106,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		b(cond);
 	Label lp2 = L();
 		ld1w(ZReg(getVarIdx(0)).s, p1, ptr(src, tmpX_, LSL, 2));
-		execOneLoop(tl);
+		execOneLoop(tl, 1);
 		st1w(ZReg(getTmpIdx(0)).s, p1, ptr(dst, tmpX_, LSL, 2));
 		incd(tmpX_);
 	L(cond);
@@ -130,53 +130,53 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		mov(tmpW_, u);
 		cpy(ZReg(dst).s, p0, tmpW_);
 	}
-	void gen_copy(int dst, int src)
+	void gen_copy(int dst, int src, int unrollN)
 	{
 		if (debug) printf("mov z%d, z%d\n", dst, src);
-		for (int i = 0; i < unrollN_; i++) {
+		for (int i = 0; i < unrollN; i++) {
 			mov(ZReg(dst + i).s, p0, ZReg(src + i).s);
 		}
 	}
-	void gen_add(int dst, int src1, int src2)
+	void gen_add(int dst, int src1, int src2, int unrollN)
 	{
 		if (debug) printf("fadd z%d, z%d, z%d\n", dst, src1, src2);
-		for (int i = 0; i < unrollN_; i++) {
+		for (int i = 0; i < unrollN; i++) {
 			fadd(ZReg(dst + i).s, ZReg(src1 + i).s, ZReg(src2 + i).s);
 		}
 	}
-	void gen_sub(int dst, int src1, int src2)
+	void gen_sub(int dst, int src1, int src2, int unrollN)
 	{
 		if (debug) printf("fsub z%d, z%d, z%d\n", dst, src1, src2);
-		for (int i = 0; i < unrollN_; i++) {
+		for (int i = 0; i < unrollN; i++) {
 			fsub(ZReg(dst + i).s, ZReg(src1 + i).s, ZReg(src2 + i).s);
 		}
 	}
-	void gen_mul(int dst, int src1, int src2)
+	void gen_mul(int dst, int src1, int src2, int unrollN)
 	{
 		if (debug) printf("fmul z%d, z%d, z%d\n", dst, src1, src2);
-		for (int i = 0; i < unrollN_; i++) {
+		for (int i = 0; i < unrollN; i++) {
 			fmul(ZReg(dst + i).s, ZReg(src1 + i).s, ZReg(src2 + i).s);
 		}
 	}
-	void gen_div(int dst, int src1, int src2)
+	void gen_div(int dst, int src1, int src2, int unrollN)
 	{
 		if (debug) printf("fdiv z%d, z%d, z%d\n", dst, src1, src2);
-		for (int i = 0; i < unrollN_; i++) {
+		for (int i = 0; i < unrollN; i++) {
 			movprfx(ZReg(dst + i), ZReg(src1 + i));
 			fdiv(ZReg(dst + i).s, p0, ZReg(src2 + i).s);
 		}
 	}
-	void gen_inv(int inout)
+	void gen_inv(int inout, int unrollN)
 	{
 		if (debug) printf("inv z%d\n", inout);
 		IndexRangeManager ftr(funcTmpReg_);
 		const ZReg t1(ftr.allocIdx());
-		for (int i = 0; i < unrollN_; i++) {
+		for (int i = 0; i < unrollN; i++) {
 			fcpy(t1.s, p0, 1.0);
 			fdivr(ZReg(inout + i).s, p0, t1.s);
 		}
 	}
-	void gen_exp(int inout)
+	void gen_exp(int inout, int n)
 	{
 		if (debug) printf("exp z%d\n", inout);
 		const ZRegS log2_e(getFloatIdx(g_expTbl.log2_e));
@@ -186,7 +186,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		const ZRegS coeff2(getFloatIdx(g_expTbl.coeff2));
 		IndexRangeManager ftr(funcTmpReg_);
 		ZRegSVec t0, t1, t2;
-		const int n = unrollN_;
 		for (int i = 0; i < n; i++) {
 			t0.push_back(ZRegS(inout + i));
 			t1.push_back(ZRegS(ftr.allocIdx()));
@@ -215,7 +214,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		for (int i = 0; i < n; i++) fmad(t0[i], p0, t2[i], one);
 		for (int i = 0; i < n; i++) fmul(t0[i], t1[i], t0[i]);
 	}
-	void gen_log(int inout)
+	void gen_log(int inout, int n)
 	{
 		printf("gen_log %d\n", inout);
 		const ZRegS i127shl23(getFloatIdx(u2f(g_logTbl.i127shl23)));
@@ -238,7 +237,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		IndexRangeManager ftm(funcTmpMask_);
 		ZRegSVec t0, t1, t2, t3;
 		PRegSVec mask;
-		const int n = unrollN_;
 		for (int i = 0; i < n; i++) {
 			t0.push_back(ZRegS(inout + i));
 			t1.push_back(ZRegS(ftr.allocIdx()));
@@ -280,9 +278,9 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		// a * x + e
 		for (int i = 0; i < n; i++) fmad(t0[i], p0, t2[i], t1[i]);
 	}
-	void gen_tanh(int inout)
+	void gen_tanh(int inout, int n)
 	{
-		throw cybozu::Exception("not support gen_tanh") << inout;
+		throw cybozu::Exception("not support gen_tanh") << inout << n;
 	}
 };
 
