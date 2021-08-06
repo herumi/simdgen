@@ -5,6 +5,7 @@
 #include <cmath>
 #include "tokenlist.hpp"
 #include "const.hpp"
+#include <cybozu/atoi.hpp>
 
 namespace sg {
 
@@ -76,13 +77,28 @@ struct GeneratorBase {
 	bool print_;
 	GeneratorBase()
 		: simdByte_(32 / 8) // one float
-		, unrollN_(2)
+		, unrollN_(1)
 		, varN_(0)
 		, constN_(0)
 		, maxTmpN_(0)
 		, curMaskTmpIdx_(0)
 		, print_(false)
 	{
+		const char *env = getenv("SG_OPT");
+		if (env == 0) return;
+		std::istringstream iss(env);
+		std::string kv;
+		while (iss >> kv) {
+			size_t pos = kv.find('=');
+			if (pos == std::string::npos) continue;
+			std::string k = kv.substr(0, pos);
+			std::string v = kv.substr(pos + 1);
+			if (k == "unroll") {
+				unrollN_ = cybozu::atoi(v);
+				if (unrollN_ < 1) throw cybozu::Exception("bad unroll") << unrollN_;
+				printf("unrollN=%d\n", unrollN_);
+			}
+		}
 	}
 	virtual ~GeneratorBase()
 	{
