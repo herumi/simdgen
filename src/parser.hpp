@@ -177,11 +177,11 @@ struct Parser {
 			}
 			char c = *begin;
 			if (c == '(') {
-				const char *next = parseAddSub(begin + 1, tl);
-				if (!isEnd(next) && *next == ')') {
-					return next + 1;
+				const char *next2 = parseAddSub(begin + 1, tl);
+				if (!isEnd(next) && *next2 == ')') {
+					return next2 + 1;
 				}
-				throw cybozu::Exception("bad parenthesis") << (isEnd(next) ? '_' : *next);
+				throw cybozu::Exception("bad parenthesis") << (isEnd(next2) ? '_' : *next2);
 			}
 		}
 		throw cybozu::Exception("bad syntax") << std::string(begin, end_);

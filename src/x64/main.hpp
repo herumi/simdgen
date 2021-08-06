@@ -104,7 +104,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			for (int i = 0; i < unrollN_; i++) {
 				vmovups(Zmm(getVarIdx(i)), ptr[src + i * simdByte_]);
 			}
-			execOneLoop(tl);
+			execOneLoop(tl, unrollN_);
 			for (int i = 0; i < unrollN_; i++) {
 				vmovups(ptr[dst + i * simdByte_], Zmm(getTmpIdx(i)));
 			}
@@ -118,10 +118,9 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			jmp(cmp2L, T_NEAR);
 
 			if (unrollN_ > 2) {
-				unrollN_ = 1;
 			Label lp2 = L();
 				vmovups(Zmm(getVarIdx(0)), ptr[src]);
-				execOneLoop(tl);
+				execOneLoop(tl, 1);
 				vmovups(ptr[dst], Zmm(getTmpIdx(0)));
 				add(src, 64);
 				add(dst, 64);
@@ -130,7 +129,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 				cmp(n, 16);
 				jge(lp2, T_NEAR);
 			}
-			unrollN_ = 1;
 
 			mov(ecx, n);
 			test(ecx, ecx);
@@ -141,7 +139,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			sub(eax, 1);
 			kmovd(k1, eax);
 			vmovups(Zmm(getVarIdx(0))|k1|T_z, ptr[src]);
-			execOneLoop(tl);
+			execOneLoop(tl, 1);
 			vmovups(ptr[dst]|k1, Zmm(getTmpIdx(0)));
 		L(exitL);
 			// restore regs
@@ -162,49 +160,49 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 //		vpbroadcastd(Zmm(dst), eax);
 		vbroadcastss(Zmm(dst), ptr[dataReg_ + constIdx_.getIdx(u) * 4]);
 	}
-	void gen_copy(int dst, int src)
+	void gen_copy(int dst, int src, int unrollN)
 	{
 		if (debug) printf("vmovaps z%d, z%d\n", dst, src);
-		for (int i = 0; i < unrollN_; i++) {
+		for (int i = 0; i < unrollN; i++) {
 			vmovaps(Zmm(dst + i), Zmm(src + i));
 		}
 	}
-	void gen_add(int dst, int src1, int src2)
+	void gen_add(int dst, int src1, int src2, int unrollN)
 	{
 		if (debug) printf("vaddps z%d, z%d, z%d\n", dst, src1, src2);
-		for (int i = 0; i < unrollN_; i++) {
+		for (int i = 0; i < unrollN; i++) {
 			vaddps(Zmm(dst + i), Zmm(src1 + i), Zmm(src2 + i));
 		}
 	}
-	void gen_sub(int dst, int src1, int src2)
+	void gen_sub(int dst, int src1, int src2, int unrollN)
 	{
 		if (debug) printf("vsubps z%d, z%d, z%d\n", dst, src1, src2);
-		for (int i = 0; i < unrollN_; i++) {
+		for (int i = 0; i < unrollN; i++) {
 			vsubps(Zmm(dst + i), Zmm(src1 + i), Zmm(src2 + i));
 		}
 	}
-	void gen_mul(int dst, int src1, int src2)
+	void gen_mul(int dst, int src1, int src2, int unrollN)
 	{
 		if (debug) printf("vmulps z%d, z%d, z%d\n", dst, src1, src2);
-		for (int i = 0; i < unrollN_; i++) {
+		for (int i = 0; i < unrollN; i++) {
 			vmulps(Zmm(dst + i), Zmm(src1 + i), Zmm(src2 + i));
 		}
 	}
-	void gen_div(int dst, int src1, int src2)
+	void gen_div(int dst, int src1, int src2, int unrollN)
 	{
 		if (debug) printf("vdivps z%d, z%d, z%d\n", dst, src1, src2);
-		for (int i = 0; i < unrollN_; i++) {
+		for (int i = 0; i < unrollN; i++) {
 			vdivps(Zmm(dst + i), Zmm(src1 + i), Zmm(src2 + i));
 		}
 	}
-	void gen_inv(int inout)
+	void gen_inv(int inout, int unrollN)
 	{
 		if (debug) printf("inv z%d\n", inout);
-		for (int i = 0; i < unrollN_; i++) {
+		for (int i = 0; i < unrollN; i++) {
 			vdivps(Zmm(inout + i), Zmm(getConstIdx(f2u(1.0))), Zmm(inout + i));
 		}
 	}
-	void gen_exp(int inout)
+	void gen_exp(int inout, int n)
 	{
 		if (debug) printf("exp z%d\n", inout);
 		const Zmm log2(getFloatIdx(g_expTbl.log2));
@@ -218,7 +216,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		};
 		IndexRangeManager ftr(funcTmpReg_);
 		ZmmVec t0, t1, t2;
-		const int n = unrollN_;
 		for (int i = 0; i < n; i++) {
 			t0.push_back(Zmm(inout + i));
 			t1.push_back(Zmm(ftr.allocIdx()));
@@ -237,7 +234,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		for (int i = 0; i < n; i++) vfmadd213ps(t2[i], t0[i], tbl[0]);
 		for (int i = 0; i < n; i++) vscalefps(t0[i], t2[i], t1[i]); // t2 * 2^t1
 	}
-	void gen_log(int inout)
+	void gen_log(int inout, int n)
 	{
 		printf("gen_log %d\n", inout);
 		const Zmm i127shl23(getFloatIdx(u2f(g_logTbl.i127shl23)));
@@ -263,7 +260,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		IndexRangeManager ftm(funcTmpMask_);
 		ZmmVec t0, t1, t2, keep;
 		OpmaskVec mask;
-		const int n = unrollN_;
 		for (int i = 0; i < n; i++) {
 			t0.push_back(Zmm(inout + i));
 			t1.push_back(Zmm(ftr.allocIdx()));
@@ -296,11 +292,10 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		}
 		for (int i = 0; i < n; i++) vfmadd213ps(t0[i], t2[i], t1[i]);
 	}
-	void gen_tanh(int inout)
+	void gen_tanh(int inout, int n)
 	{
-		throw cybozu::Exception("not support gen_tanh") << inout;
+		throw cybozu::Exception("not support gen_tanh") << inout << n;
 	}
 };
 
 } // namespace sg
-
