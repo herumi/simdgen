@@ -89,9 +89,37 @@ CYBOZU_TEST_AUTO(parse)
 	printer.exec(tl);
 }
 
+#define TEST_FUNC (1+x*(2+x*(3+x)+2*x))
+#define STR_(x) #x
+#define STR(x) STR_(x)
+
+CYBOZU_TEST_AUTO(calc)
+{
+	const char *src = STR(TEST_FUNC);
+	SgCode *sg = SgCreate();
+	SgFuncFloat1* addr = SgGetFuncFloat1(sg, "x", src);
+	const size_t N = 200;
+	float xs[N], ys[N + 1];
+	for (size_t i = 0; i < N; i++) {
+		xs[i] = i;
+	}
+	float dummyVal = 9999;
+	ys[N] = dummyVal;
+	addr(ys, xs, N);
+	for (size_t i = 0; i < N; i++) {
+		float x = xs[i];
+		float ok = TEST_FUNC;
+		float my = ys[i];
+		CYBOZU_TEST_EQUAL(sg::f2u(ok), sg::f2u(my));
+	}
+	// check that the value does not change
+	CYBOZU_TEST_EQUAL(sg::f2u(dummyVal), sg::f2u(ys[N]));
+	SgDestroy(sg);
+}
+
 std::string g_src;
 
-CYBOZU_TEST_AUTO(x64)
+CYBOZU_TEST_AUTO(sample)
 {
 	const char *src = "x*2e3-3.1415";
 	if (!g_src.empty()) {
