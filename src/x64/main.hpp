@@ -160,45 +160,35 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 //		vpbroadcastd(Zmm(dst), eax);
 		vbroadcastss(Zmm(dst), ptr[dataReg_ + constIdx_.getIdx(u) * 4]);
 	}
-	void gen_copy(int dst, int src, int unrollN)
+	void gen_copy(int dst, int src)
 	{
 		if (debug) printf("vmovaps z%d, z%d\n", dst, src);
-		for (int i = 0; i < unrollN; i++) {
-			vmovaps(Zmm(dst + i), Zmm(src + i));
-		}
+		vmovaps(Zmm(dst), Zmm(src));
 	}
-	void gen_add(int dst, int src1, int src2, int unrollN)
+	void gen_add(int dst, int src1, int src2)
 	{
 		if (debug) printf("vaddps z%d, z%d, z%d\n", dst, src1, src2);
-		for (int i = 0; i < unrollN; i++) {
-			vaddps(Zmm(dst + i), Zmm(src1 + i), Zmm(src2 + i));
-		}
+		vaddps(Zmm(dst), Zmm(src1), Zmm(src2));
 	}
-	void gen_sub(int dst, int src1, int src2, int unrollN)
+	void gen_sub(int dst, int src1, int src2)
 	{
 		if (debug) printf("vsubps z%d, z%d, z%d\n", dst, src1, src2);
-		for (int i = 0; i < unrollN; i++) {
-			vsubps(Zmm(dst + i), Zmm(src1 + i), Zmm(src2 + i));
-		}
+		vsubps(Zmm(dst), Zmm(src1), Zmm(src2));
 	}
-	void gen_mul(int dst, int src1, int src2, int unrollN)
+	void gen_mul(int dst, int src1, int src2)
 	{
 		if (debug) printf("vmulps z%d, z%d, z%d\n", dst, src1, src2);
-		for (int i = 0; i < unrollN; i++) {
-			vmulps(Zmm(dst + i), Zmm(src1 + i), Zmm(src2 + i));
-		}
+		vmulps(Zmm(dst), Zmm(src1), Zmm(src2));
 	}
-	void gen_div(int dst, int src1, int src2, int unrollN)
+	void gen_div(int dst, int src1, int src2)
 	{
 		if (debug) printf("vdivps z%d, z%d, z%d\n", dst, src1, src2);
-		for (int i = 0; i < unrollN; i++) {
-			vdivps(Zmm(dst + i), Zmm(src1 + i), Zmm(src2 + i));
-		}
+		vdivps(Zmm(dst), Zmm(src1), Zmm(src2));
 	}
-	void gen_inv(int inout, int unrollN)
+	void gen_inv(int inout, int n)
 	{
 		if (debug) printf("inv z%d\n", inout);
-		for (int i = 0; i < unrollN; i++) {
+		for (int i = 0; i < n; i++) {
 			vdivps(Zmm(inout + i), Zmm(getConstIdx(f2u(1.0))), Zmm(inout + i));
 		}
 	}

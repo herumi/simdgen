@@ -166,7 +166,7 @@ struct GeneratorBase {
 		gen_setConst();
 		puts("execOneLoop");
 		for (uint32_t i = 0; i < varN_; i++) {
-			gen_loadVar(getVarIdx(i), i, 1);
+			gen_loadVar(getVarIdx(i), i);
 		}
 		execOneLoop(tl, 1);
 //		gen_saveVar(0, getTmpOffset());
@@ -175,45 +175,45 @@ struct GeneratorBase {
 	{
 		if (print_) printf("setImm z%d, %08x\n", dst, u);
 	}
-	virtual void gen_loadVar(int dst, uint32_t u, int /*unrollN*/)
+	virtual void gen_loadVar(int dst, uint32_t u)
 	{
 		if (print_) printf("loadVar z%d, [%u]\n", dst, u);
 	}
-	virtual void gen_copy(int dst, int src, int /*unrollN*/)
+	virtual void gen_copy(int dst, int src)
 	{
 		if (print_) printf("copy z%d, z%d\n", dst, src);
 	}
-	virtual void gen_add(int dst, int src1, int src2, int /*unrollN*/)
+	virtual void gen_add(int dst, int src1, int src2)
 	{
 		if (print_) printf("add z%d, z%d, z%d\n", dst, src1, src2);
 	}
-	virtual void gen_sub(int dst, int src1, int src2, int /*unrollN*/)
+	virtual void gen_sub(int dst, int src1, int src2)
 	{
 		if (print_) printf("sub z%d, z%d, z%d\n", dst, src1, src2);
 	}
-	virtual void gen_mul(int dst, int src1, int src2, int /*unrollN*/)
+	virtual void gen_mul(int dst, int src1, int src2)
 	{
 		if (print_) printf("mul z%d, z%d, z%d\n", dst, src1, src2);
 	}
-	virtual void gen_div(int dst, int src1, int src2, int /*unrollN*/)
+	virtual void gen_div(int dst, int src1, int src2)
 	{
 		if (print_) printf("div z%d, z%d, z%d\n", dst, src1, src2);
 	}
-	virtual void gen_inv(int inout, int /*unrollN*/)
+	virtual void gen_inv(int inout, int n)
 	{
-		if (print_) printf("inv z%d\n", inout);
+		if (print_) printf("inv z%d (%d)\n", inout, n);
 	}
-	virtual void gen_exp(int inout, int /*unrollN*/)
+	virtual void gen_exp(int inout, int n)
 	{
-		if (print_) printf("exp z%d\n", inout);
+		if (print_) printf("exp z%d (%d)\n", inout, n);
 	}
-	virtual void gen_log(int inout, int /*unrollN*/)
+	virtual void gen_log(int inout, int n)
 	{
-		if (print_) printf("log z%d\n", inout);
+		if (print_) printf("log z%d (%d)\n", inout, n);
 	}
-	virtual void gen_tanh(int inout, int /*unrollN*/)
+	virtual void gen_tanh(int inout, int n)
 	{
-		if (print_) printf("tanh z%d\n", inout);
+		if (print_) printf("tanh z%d (%d)\n", inout, n);
 	}
 	template<class TL>
 	void execOneLoop(const TL& tl, int unrollN)
@@ -225,36 +225,46 @@ struct GeneratorBase {
 			const Value& v = vv[i];
 			switch (v.type) {
 			case Var:
-				gen_copy(pos++, getVarIdxOffset() + v.v, unrollN);
+				for (int i = 0; i < unrollN; i++) {
+					gen_copy(pos + i, getVarIdxOffset() + v.v + i);
+				}
+				pos += unrollN;
 				break;
 			case Const:
-				gen_copy(pos++, getConstIdxOffset() + constIdx_.getIdx(v.v), unrollN);
+				for (int i = 0; i < unrollN; i++) {
+					gen_copy(pos + i, getConstIdxOffset() + constIdx_.getIdx(v.v));
+				}
+				pos += unrollN;
 				break;
 			case Op:
-				assert(pos > 1);
-				pos--;
-				switch (v.v) {
-				case Add: gen_add(pos - 1, pos - 1, pos, unrollN); break;
-				case Sub: gen_sub(pos - 1, pos - 1, pos, unrollN); break;
-				case Mul: gen_mul(pos - 1, pos - 1, pos, unrollN); break;
-				case Div: gen_div(pos - 1, pos - 1, pos, unrollN); break;
-				default:
-					throw cybozu::Exception("bad op") << i << v.v;
+				assert(pos > unrollN);
+				pos -= unrollN;
+				for (int i = 0; i < unrollN; i++) {
+					int dst = pos - unrollN + i;
+					int src = pos + i;
+					switch (v.v) {
+					case Add: gen_add(dst, dst, src); break;
+					case Sub: gen_sub(dst, dst, src); break;
+					case Mul: gen_mul(dst, dst, src); break;
+					case Div: gen_div(dst, dst, src); break;
+					default:
+						throw cybozu::Exception("bad op") << i << v.v;
+					}
 				}
 				break;
 			case Func:
 				assert(pos > 0);
 				switch (v.v) {
-				case Inv: gen_inv(pos - 1, unrollN); break;
-				case Exp: gen_exp(pos - 1, unrollN); break;
-				case Log: gen_log(pos - 1, unrollN); break;
-				case Tanh: gen_tanh(pos - 1, unrollN); break;
+				case Inv: gen_inv(pos - unrollN, unrollN); break;
+				case Exp: gen_exp(pos - unrollN, unrollN); break;
+				case Log: gen_log(pos - unrollN, unrollN); break;
+				case Tanh: gen_tanh(pos - unrollN, unrollN); break;
 				default:
-					throw cybozu::Exception("bad func") << i << v.v;
+					throw cybozu::Exception("bad func") << i << pos << v.v;
 				}
 				break;
 			default:
-				throw cybozu::Exception("bad type") << i << v.type;
+				throw cybozu::Exception("bad type") << i << pos << v.type;
 			}
 		}
 	}
