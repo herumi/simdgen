@@ -130,49 +130,39 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		mov(tmpW_, u);
 		cpy(ZReg(dst).s, p0, tmpW_);
 	}
-	void gen_copy(int dst, int src, int unrollN)
+	void gen_copy(int dst, int src)
 	{
 		if (debug) printf("mov z%d, z%d\n", dst, src);
-		for (int i = 0; i < unrollN; i++) {
-			mov(ZReg(dst + i).s, p0, ZReg(src + i).s);
-		}
+		mov(ZReg(dst).s, p0, ZReg(src).s);
 	}
-	void gen_add(int dst, int src1, int src2, int unrollN)
+	void gen_add(int dst, int src1, int src2)
 	{
 		if (debug) printf("fadd z%d, z%d, z%d\n", dst, src1, src2);
-		for (int i = 0; i < unrollN; i++) {
-			fadd(ZReg(dst + i).s, ZReg(src1 + i).s, ZReg(src2 + i).s);
-		}
+		fadd(ZReg(dst).s, ZReg(src1).s, ZReg(src2).s);
 	}
-	void gen_sub(int dst, int src1, int src2, int unrollN)
+	void gen_sub(int dst, int src1, int src2)
 	{
 		if (debug) printf("fsub z%d, z%d, z%d\n", dst, src1, src2);
-		for (int i = 0; i < unrollN; i++) {
-			fsub(ZReg(dst + i).s, ZReg(src1 + i).s, ZReg(src2 + i).s);
-		}
+		fsub(ZReg(dst).s, ZReg(src1).s, ZReg(src2).s);
 	}
-	void gen_mul(int dst, int src1, int src2, int unrollN)
+	void gen_mul(int dst, int src1, int src2)
 	{
 		if (debug) printf("fmul z%d, z%d, z%d\n", dst, src1, src2);
-		for (int i = 0; i < unrollN; i++) {
-			fmul(ZReg(dst + i).s, ZReg(src1 + i).s, ZReg(src2 + i).s);
-		}
+		fmul(ZReg(dst).s, ZReg(src1).s, ZReg(src2).s);
 	}
-	void gen_div(int dst, int src1, int src2, int unrollN)
+	void gen_div(int dst, int src1, int src2)
 	{
 		if (debug) printf("fdiv z%d, z%d, z%d\n", dst, src1, src2);
-		for (int i = 0; i < unrollN; i++) {
-			movprfx(ZReg(dst + i), ZReg(src1 + i));
-			fdiv(ZReg(dst + i).s, p0, ZReg(src2 + i).s);
-		}
+		movprfx(ZReg(dst), ZReg(src1));
+		fdiv(ZReg(dst).s, p0, ZReg(src2).s);
 	}
-	void gen_inv(int inout, int unrollN)
+	void gen_inv(int inout, int n)
 	{
 		if (debug) printf("inv z%d\n", inout);
 		IndexRangeManager ftr(funcTmpReg_);
 		const ZReg t1(ftr.allocIdx());
-		for (int i = 0; i < unrollN; i++) {
-			fcpy(t1.s, p0, 1.0);
+		fcpy(t1.s, p0, 1.0);
+		for (int i = 0; i < n; i++) {
 			fdivr(ZReg(inout + i).s, p0, t1.s);
 		}
 	}
