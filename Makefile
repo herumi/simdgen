@@ -142,6 +142,11 @@ test: $(TEST_EXE)
 	@sh -ec 'for i in $(TEST_EXE); do $$i|grep "ctest:name"; done' > result.txt
 	@grep -v "ng=0, exception=0" result.txt; if [ $$? -eq 1 ]; then echo "all unit tests succeed"; else exit 1; fi
 
+test_unroll: $(TEST_EXE)
+	env SG_OPT="unroll=1" bin/accuracy_test.exe >u1.txt
+	env SG_OPT="unroll=2" bin/accuracy_test.exe >u2.txt
+	env SG_OPT="unroll=3" bin/accuracy_test.exe >u3.txt
+
 clean:
 	$(RM) $(LIB_DIR)/*.a $(LIB_DIR)/*.$(LIB_SUF) $(OBJ_DIR)/*.o $(OBJ_DIR)/*.obj $(OBJ_DIR)/*.d $(EXE_DIR)/*.exe
 
