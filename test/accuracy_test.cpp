@@ -54,9 +54,12 @@ void checkRange(float (*f)(float), SgFuncFloat1 *g, float begin, float end, floa
 	size_t n = size_t((end - begin) / step);
 	src.resize(n);
 	dst.resize(n);
-	for (size_t i = 0; i < n; i++) {
-		src[i] = begin;
-		begin += step;
+	{
+		float x = begin;
+		for (size_t i = 0; i < n; i++) {
+			src[i] = x;
+			x += step;
+		}
 	}
 	g(&dst[0], &src[0], n);
 
