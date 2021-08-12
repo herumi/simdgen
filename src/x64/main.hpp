@@ -26,13 +26,11 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	static const size_t totalSize = dataSize + codeSize;
 	SgFuncFloat1 *addr_;
 	Label dataL_;
-	int totalN_;
 	Reg64 dataReg_;
 
 	Generator()
 		: CodeGenerator(totalSize, DontSetProtectRWE)
 		, addr_(0)
-		, totalN_(0)
 		, dataReg_(rax)
 	{
 		simdByte_ = 512 / 8;

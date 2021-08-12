@@ -25,7 +25,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	static const size_t totalSize = dataSize + codeSize;
 	SgFuncFloat1 *addr_;
 	Label dataL_;
-	int totalN_;
 	XReg dataReg_;
 	XReg tmpX_;
 	WReg tmpW_;
@@ -34,7 +33,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	Generator()
 		: CodeGenerator(totalSize)
 		, addr_(0)
-		, totalN_(0)
 		, dataReg_(x3)
 		, tmpX_(x4)
 		, tmpW_(w4)
