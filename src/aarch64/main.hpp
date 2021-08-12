@@ -12,27 +12,12 @@ typedef std::vector<PRegS> PRegSVec;
 
 namespace sg {
 
-const int freeTbl[] = {
-	0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-};
-
-static const size_t maxFreeN = sizeof(freeTbl)/sizeof(freeTbl[0]);
-
-const int saveTbl[] = {
-	8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23
-};
-static const size_t maxSaveN = sizeof(saveTbl)/sizeof(saveTbl[0]);
-
-inline bool isKeepReg(uint32_t idx)
-{
-	return idx < maxFreeN;
-}
-
-inline uint32_t getKeepNum(uint32_t maxIdx)
-{
-	if (maxIdx < maxFreeN) return 0;
-	return maxIdx - maxFreeN;
-}
+/*
+	free : z0, ..., z7, z24, ..., z31
+	save : z8, ..., z23
+*/
+static const int saveRegBegin = 8;
+static const int saveRegEnd = 24;
 
 struct Generator : CodeGenerator, sg::GeneratorBase {
 	static const size_t dataSize = 4096;
@@ -41,7 +26,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	SgFuncFloat1 *addr_;
 	Label dataL_;
 	int totalN_;
-	int keepN_;
 	XReg dataReg_;
 	XReg tmpX_;
 	WReg tmpW_;
@@ -51,7 +35,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		: CodeGenerator(totalSize)
 		, addr_(0)
 		, totalN_(0)
-		, keepN_(0)
 		, dataReg_(x3)
 		, tmpX_(x4)
 		, tmpW_(w4)
@@ -75,9 +58,9 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		adr(dataReg_, dataL);
 		ptrue(p0.s);
 		// store regs
-		for (int i = 0; i < keepN_; i++) {
+		for (int i = saveRegBegin; i < std::min(saveRegEnd, totalN_); i++) {
 			sub(sp, sp, 64);
-			st1w(ZReg(saveTbl[i]).s, p0, ptr(sp));
+			st1w(ZReg(i).s, p0, ptr(sp));
 		}
 		const XReg& dst = x0;
 		const XReg& src = x1;
@@ -114,8 +97,8 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		b_first(lp2);
 
 		// restore regs
-		for (int i = 0; i < keepN_; i++) {
-			ld1w(ZReg(saveTbl[i]).s, p0, ptr(sp));
+		for (int i = saveRegBegin; i < std::min(saveRegEnd, totalN_); i++) {
+			ld1w(ZReg(i).s, p0, ptr(sp));
 			add(sp, sp, 64);
 		}
 		ret();
