@@ -75,7 +75,7 @@ struct GeneratorBase {
 	uint32_t maxTmpN_; // max # of regs in evaluation
 	int totalN_;
 	uint32_t curMaskTmpIdx_;
-	bool print_;
+	bool debug;
 	GeneratorBase()
 		: simdByte_(32 / 8) // one float
 		, unrollN_(1)
@@ -84,7 +84,7 @@ struct GeneratorBase {
 		, maxTmpN_(0)
 		, totalN_(0)
 		, curMaskTmpIdx_(0)
-		, print_(false)
+		, debug(false)
 	{
 		const char *env = getenv("SG_OPT");
 		if (env == 0) return;
@@ -164,7 +164,7 @@ struct GeneratorBase {
 	}
 	virtual void exec(const sg::TokenList& tl)
 	{
-		if (print_) puts("init of GeneratorBase");
+		if (debug) puts("init of GeneratorBase");
 		updateConstIdx(tl);
 		gen_setConst();
 		puts("execOneLoop");
@@ -176,47 +176,47 @@ struct GeneratorBase {
 	}
 	virtual void gen_setInt(int dst, uint32_t u)
 	{
-		if (print_) printf("setImm z%d, %08x\n", dst, u);
+		if (debug) printf("setImm z%d, %08x\n", dst, u);
 	}
 	virtual void gen_loadVar(int dst, uint32_t u)
 	{
-		if (print_) printf("loadVar z%d, [%u]\n", dst, u);
+		if (debug) printf("loadVar z%d, [%u]\n", dst, u);
 	}
 	virtual void gen_copy(int dst, int src)
 	{
-		if (print_) printf("copy z%d, z%d\n", dst, src);
+		if (debug) printf("copy z%d, z%d\n", dst, src);
 	}
 	virtual void gen_add(int dst, int src1, int src2)
 	{
-		if (print_) printf("add z%d, z%d, z%d\n", dst, src1, src2);
+		if (debug) printf("add z%d, z%d, z%d\n", dst, src1, src2);
 	}
 	virtual void gen_sub(int dst, int src1, int src2)
 	{
-		if (print_) printf("sub z%d, z%d, z%d\n", dst, src1, src2);
+		if (debug) printf("sub z%d, z%d, z%d\n", dst, src1, src2);
 	}
 	virtual void gen_mul(int dst, int src1, int src2)
 	{
-		if (print_) printf("mul z%d, z%d, z%d\n", dst, src1, src2);
+		if (debug) printf("mul z%d, z%d, z%d\n", dst, src1, src2);
 	}
 	virtual void gen_div(int dst, int src1, int src2)
 	{
-		if (print_) printf("div z%d, z%d, z%d\n", dst, src1, src2);
+		if (debug) printf("div z%d, z%d, z%d\n", dst, src1, src2);
 	}
 	virtual void gen_inv(int inout, int n)
 	{
-		if (print_) printf("inv z%d (%d)\n", inout, n);
+		if (debug) printf("inv z%d (%d)\n", inout, n);
 	}
 	virtual void gen_exp(int inout, int n)
 	{
-		if (print_) printf("exp z%d (%d)\n", inout, n);
+		if (debug) printf("exp z%d (%d)\n", inout, n);
 	}
 	virtual void gen_log(int inout, int n)
 	{
-		if (print_) printf("log z%d (%d)\n", inout, n);
+		if (debug) printf("log z%d (%d)\n", inout, n);
 	}
 	virtual void gen_tanh(int inout, int n)
 	{
-		if (print_) printf("tanh z%d (%d)\n", inout, n);
+		if (debug) printf("tanh z%d (%d)\n", inout, n);
 	}
 	template<class TL>
 	void execOneLoop(const TL& tl, int unrollN)
@@ -317,13 +317,6 @@ struct GeneratorBase {
 				break;
 			}
 		}
-	}
-};
-
-struct Printer : GeneratorBase {
-	Printer()
-	{
-		print_ = true;
 	}
 };
 

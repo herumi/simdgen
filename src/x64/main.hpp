@@ -28,14 +28,12 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	Label dataL_;
 	int totalN_;
 	Reg64 dataReg_;
-	bool debug;
 
 	Generator()
 		: CodeGenerator(totalSize, DontSetProtectRWE)
 		, addr_(0)
 		, totalN_(0)
 		, dataReg_(rax)
-		, debug(false)
 	{
 		simdByte_ = 512 / 8;
 		setFuncInfoTbl();

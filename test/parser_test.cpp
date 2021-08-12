@@ -85,8 +85,9 @@ CYBOZU_TEST_AUTO(parse)
 	sg::Parser parser;
 	parser.parse(tl, src);
 	tl.put();
-	sg::Printer printer;
-	printer.exec(tl);
+	sg::GeneratorBase gen;
+	gen.debug = true;
+	gen.exec(tl);
 }
 
 #define TEST_FUNC (1+x*(2+x*(3+x)+2*x))
