@@ -22,26 +22,24 @@ struct FuncInfo {
 
 struct IndexRange {
 	int offset_;
-	int max_;
+	int n_;
 	int cur_;
 	IndexRange()
 		: offset_(0)
-		, max_(0)
+		, n_(0)
 		, cur_(0)
 	{
 	}
 	int alloc()
 	{
-		if (cur_ == max_) throw cybozu::Exception("too alloc") << max_;
+		if (cur_ == n_) throw cybozu::Exception("too alloc") << n_;
 		return offset_ + cur_++;
 	}
 	int getCur() const { return cur_; }
 	void setCur(int cur) { cur_ = cur; }
-	void updateMax(int max)
-	{
-		if (max > max_) max_ = max;
-	}
-	int getMax() const { return max_; }
+	void setSize(int n) { n_ = n; }
+	int getSize() const { return n_; }
+	int getMax() const { return offset_ + n_; }
 	void setOffset(int offset) { offset_ = offset; }
 };
 
@@ -108,7 +106,7 @@ struct GeneratorBase {
 	int getVarIdxOffset() const { return 0; }
 	int getVarIdx(int i) const { return getVarIdxOffset() + i; }
 	uint32_t getConstIdxOffset() const { return varN_; }
-	uint32_t getTmpOffset() const { return varN_ + constN_ + funcTmpReg_.getMax(); }
+	uint32_t getTmpOffset() const { return varN_ + constN_ + funcTmpReg_.getSize(); }
 	int getTmpIdx(int i) const { return getTmpOffset() + i; }
 	uint32_t getTotalNum() const { return getTmpOffset() + maxTmpN_; }
 
@@ -128,11 +126,13 @@ struct GeneratorBase {
 				constIdx_.append(vv[i].v);
 			}
 		}
-		funcTmpReg_.max_ = 0;
+		funcTmpReg_.n_ = 0;
 		/*
 			append const var in used functions
 			set funcTmpReg_
 		*/
+		int regN = 0;
+		int maskN = 0;
 		for (int i = 0; i < sg::FuncTypeN; i++) {
 			if (!tl.isUsedFunc(i)) continue;
 			const FuncInfo& fi = funcInfoTbl[i];
@@ -140,18 +140,19 @@ struct GeneratorBase {
 			for (size_t j = 0; j < constTbl.size(); j++) {
 				constIdx_.append(constTbl[j]);
 			}
-			funcTmpReg_.updateMax(fi.tmpRegN);
-			funcTmpMask_.updateMax(fi.tmpMaskN);
+			if (fi.tmpRegN > regN) regN = fi.tmpRegN;
+			if (fi.tmpMaskN > maskN) maskN = fi.tmpMaskN;
 		}
-		funcTmpReg_.updateMax(funcTmpReg_.getMax() * unrollN_);
-		funcTmpMask_.updateMax(funcTmpMask_.getMax() * unrollN_);
+		funcTmpReg_.setSize(regN * unrollN_);
+		funcTmpMask_.setSize(maskN * unrollN_);
+
 		varN_ = tl.getVarNum() * unrollN_;
 		constN_ = constIdx_.size();
 		funcTmpReg_.setOffset(varN_ + constN_);
-		funcTmpMask_.setOffset(1 + unrollN_); // mask0 and mask1 are reserved
+		funcTmpMask_.setOffset(1 + 1); // mask0 and mask1 are reserved
 		maxTmpN_ = tl.getMaxTmpNum() * unrollN_;
-		totalN_ = varN_ + constN_ + funcTmpReg_.getMax() + maxTmpN_;
-		printf("varN=%d constN=%d funcTmpReg.max=%d maxTmpN=%d\n", varN_, constN_, funcTmpReg_.getMax(), maxTmpN_);
+		totalN_ = varN_ + constN_ + funcTmpReg_.getSize() + maxTmpN_;
+		if (debug) printf("varN=%d constN=%d funcTmpReg.max=%d maxTmpN=%d\n", varN_, constN_, funcTmpReg_.getSize(), maxTmpN_);
 		if (totalN_ > 32) {
 			throw cybozu::Exception("too many registers");
 		}

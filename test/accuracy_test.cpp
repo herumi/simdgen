@@ -80,9 +80,9 @@ void checkRange(float (*f)(float), SgFuncFloat1 *g, float begin, float end, floa
 		aveN++;
 	}
 	ave /= aveN;
-	printf("range [%.2e, %.2e] step=%.2e\n", begin, end, step);
-	printf("maxe=%e (x=%e)\n", maxe, maxx);
-	printf("ave=%e\n", ave);
+	printf("range [%f, %f] step=%f\n", begin, end, step);
+	printf("maxe=%f (x=%f)\n", maxe, maxx);
+	printf("ave=%f\n", ave);
 	CYBOZU_TEST_ASSERT(ave <= MAX_E);
 	CYBOZU_TEST_ASSERT(maxe <= MAX_E);
 }

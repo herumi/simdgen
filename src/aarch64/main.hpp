@@ -19,6 +19,12 @@ namespace sg {
 static const int saveRegBegin = 8;
 static const int saveRegEnd = 24;
 
+/*
+	free : p0, p1, p2, p3
+	save : p4, ...
+*/
+static const int savePredBegin = 4;
+
 struct Generator : CodeGenerator, sg::GeneratorBase {
 	static const size_t dataSize = 4096;
 	static const size_t codeSize = 8192;
@@ -60,6 +66,10 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			sub(sp, sp, 64);
 			st1w(ZReg(i).s, p0, ptr(sp));
 		}
+		for (int i = savePredBegin; i < funcTmpMask_.getMax(); i++) {
+			sub(sp, sp, 16);
+			str(PReg(i).s, ptr(sp));
+		}
 		const XReg& dst = x0;
 		const XReg& src = x1;
 		const XReg& n = x2;
@@ -95,6 +105,10 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		b_first(lp2);
 
 		// restore regs
+		for (int i = savePredBegin; i < funcTmpMask_.getMax(); i++) {
+			ldr(PReg(i).s, ptr(sp));
+			add(sp, sp, 16);
+		}
 		for (int i = saveRegBegin; i < std::min(saveRegEnd, totalN_); i++) {
 			ld1w(ZReg(i).s, p0, ptr(sp));
 			add(sp, sp, 64);
