@@ -73,6 +73,7 @@ struct GeneratorBase {
 	IndexRange funcTmpReg_;
 	IndexRange funcTmpMask_;
 	uint32_t maxTmpN_; // max # of regs in evaluation
+	int totalN_;
 	uint32_t curMaskTmpIdx_;
 	bool print_;
 	GeneratorBase()
@@ -81,6 +82,7 @@ struct GeneratorBase {
 		, varN_(0)
 		, constN_(0)
 		, maxTmpN_(0)
+		, totalN_(0)
 		, curMaskTmpIdx_(0)
 		, print_(false)
 	{
@@ -148,8 +150,9 @@ struct GeneratorBase {
 		funcTmpReg_.setOffset(varN_ + constN_);
 		funcTmpMask_.setOffset(1 + unrollN_); // mask0 and mask1 are reserved
 		maxTmpN_ = tl.getMaxTmpNum() * unrollN_;
+		totalN_ = varN_ + constN_ + funcTmpReg_.getMax() + maxTmpN_;
 		printf("varN=%d constN=%d funcTmpReg.max=%d maxTmpN=%d\n", varN_, constN_, funcTmpReg_.getMax(), maxTmpN_);
-		if (varN_ + constN_ + maxTmpN_ > 32) {
+		if (totalN_ > 32) {
 			throw cybozu::Exception("too many registers");
 		}
 	}

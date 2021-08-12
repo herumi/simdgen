@@ -12,34 +12,13 @@ typedef std::vector<Opmask> OpmaskVec;
 
 namespace sg {
 
-const int freeTbl[] = {
-	0, 1, 2, 3, 4,
-#ifndef XBYAK64_WIN
-	5, 6,
-#endif
-};
-
-static const size_t maxFreeN = sizeof(freeTbl)/sizeof(freeTbl[0]);
-
-const int saveTbl[] = {
 #ifdef XBYAK64_WIN
-	5, 6,
+// zmm0, ..., zmm4 are free
+const int maxFreeN = 5;
+#else
+// zmm0, ..., zmm6 are free
+const int maxFreeN = 7;
 #endif
-	7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
-};
-
-static const size_t maxSaveN = sizeof(saveTbl)/sizeof(saveTbl[0]);
-
-inline bool isKeepReg(uint32_t idx)
-{
-	return idx < maxFreeN;
-}
-
-inline uint32_t getKeepNum(uint32_t maxIdx)
-{
-	if (maxIdx < maxFreeN) return 0;
-	return maxIdx - maxFreeN;
-}
 
 struct Generator : CodeGenerator, sg::GeneratorBase {
 	static const size_t dataSize = 4096;
@@ -48,7 +27,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	SgFuncFloat1 *addr_;
 	Label dataL_;
 	int totalN_;
-	int keepN_;
 	Reg64 dataReg_;
 	bool debug;
 
@@ -56,7 +34,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		: CodeGenerator(totalSize, DontSetProtectRWE)
 		, addr_(0)
 		, totalN_(0)
-		, keepN_(0)
 		, dataReg_(rax)
 		, debug(false)
 	{
@@ -85,10 +62,12 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		setSize(dataSize);
 		addr_ = getCurr<SgFuncFloat1*>();
 		{
-			StackFrame sf(this, 3, 1 | UseRCX, keepN_ * simdByte_);
+			int keepN = 0;
+			if (totalN_ > maxFreeN) keepN = totalN_ - maxFreeN;
+			StackFrame sf(this, 3, 1 | UseRCX, keepN * simdByte_);
 			// store regs
-			for (int i = 0; i < keepN_; i++) {
-				vmovups(ptr[rsp + i * simdByte_], Zmm(saveTbl[i]));
+			for (int i = 0; i < keepN; i++) {
+				vmovups(ptr[rsp + i * simdByte_], Zmm(maxFreeN + i));
 			}
 			const Reg64& dst = sf.p[0];
 			const Reg64& src = sf.p[1];
@@ -143,8 +122,8 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			vmovups(ptr[dst]|k1, Zmm(getTmpIdx(0)));
 		L(exitL);
 			// restore regs
-			for (int i = 0; i < keepN_; i++) {
-				vmovups(Zmm(saveTbl[i]), ptr[rsp + i * simdByte_]);
+			for (int i = 0; i < keepN; i++) {
+				vmovups(Zmm(maxFreeN + i), ptr[rsp + i * simdByte_]);
 			}
 		}
 		puts("setProtectModeRE");
