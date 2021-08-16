@@ -206,6 +206,29 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		for (int i = 0; i < n; i++) vfmadd213ps(t2[i], t0[i], tbl[0]);
 		for (int i = 0; i < n; i++) vscalefps(t0[i], t2[i], t1[i]); // t2 * 2^t1
 	}
+	void gen_cosh(int inout, int n)
+	{
+		const Zmm f0p5(getFloatIdx(0.5));
+		const Zmm x7fffffff(getFloatIdx(u2f(0x7fffffff)));
+		/*
+			X = exp(|x|)
+			cosh(x) = (X + 1/X) * 0.5
+		*/
+		for (int i = 0; i < n; i++) {
+			vandps(Zmm(inout + i), Zmm(inout + i), x7fffffff);
+		}
+		gen_exp(inout, n);
+		IndexRangeManager ftr(funcTmpReg_);
+		ZmmVec t0, t1;
+		for (int i = 0; i < n; i++) {
+			t0.push_back(Zmm(inout + i));
+			t1.push_back(Zmm(ftr.allocIdx()));
+			vmovaps(t1[i], t0[i]);
+		}
+		gen_inv(t1[0].getIdx(), n);
+		for (int i = 0; i < n; i++) vaddps(t0[i], t0[i], t1[i]);
+		for (int i = 0; i < n; i++) vmulps(t0[i], t0[i], f0p5);
+	}
 	void gen_log(int inout, int n)
 	{
 		printf("gen_log %d\n", inout);

@@ -215,6 +215,10 @@ struct GeneratorBase {
 	{
 		if (debug) printf("log z%d (%d)\n", inout, n);
 	}
+	virtual void gen_cosh(int inout, int n)
+	{
+		if (debug) printf("cosh z%d (%d)\n", inout, n);
+	}
 	virtual void gen_tanh(int inout, int n)
 	{
 		if (debug) printf("tanh z%d (%d)\n", inout, n);
@@ -262,6 +266,7 @@ struct GeneratorBase {
 				case Inv: gen_inv(pos - unrollN, unrollN); break;
 				case Exp: gen_exp(pos - unrollN, unrollN); break;
 				case Log: gen_log(pos - unrollN, unrollN); break;
+				case Cosh: gen_cosh(pos - unrollN, unrollN); break;
 				case Tanh: gen_tanh(pos - unrollN, unrollN); break;
 				default:
 					throw cybozu::Exception("bad func") << i << pos << v.v;
@@ -287,6 +292,7 @@ struct GeneratorBase {
 				fi.tmpMaskN = 0;
 				break;
 			case Exp:
+			case Cosh:
 				fi.constTbl.push_back(f2u(g_expTbl.log2_e));
 #ifdef SG_X64
 				fi.constTbl.push_back(f2u(g_expTbl.log2));
@@ -301,6 +307,14 @@ struct GeneratorBase {
 #endif
 				fi.tmpRegN = ExpTbl::tmpRegN;
 				fi.tmpMaskN = ExpTbl::tmpMaskN;
+				if (i == Exp) break;
+				// cosh(x) = (e^x + e^(-x))*0.5
+				fi.constTbl.push_back(f2u(0.5));
+				// for inv
+#ifdef SG_X64
+				fi.constTbl.push_back(f2u(2.0));
+				fi.constTbl.push_back(0x7fffffff);
+#endif
 				break;
 			case Log:
 				fi.constTbl.push_back(g_logTbl.i127shl23);

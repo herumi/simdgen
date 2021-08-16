@@ -39,6 +39,7 @@ enum FuncType {
 	Inv,
 	Exp,
 	Log,
+	Cosh,
 	Tanh,
 	FuncTypeN
 };
@@ -49,6 +50,7 @@ inline const char* getFuncName(size_t i)
 		"inv",
 		"exp",
 		"log",
+		"cosh",
 		"tanh",
 	};
 	if (i >= CYBOZU_NUM_OF_ARRAY(tbl)) {

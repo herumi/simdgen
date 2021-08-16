@@ -151,3 +151,14 @@ CYBOZU_TEST_AUTO(inv)
 	SgDestroy(sg);
 }
 
+CYBOZU_TEST_AUTO(cosh)
+{
+	SgCode *sg = SgCreate();
+	SgFuncFloat1 *addr = SgGetFuncFloat1(sg, "x", "cosh(x)");
+	const float tbl[] = {
+		-30, -10, -3, -2, -0.3, 0, 0.4, 1, 2, 3, 30, 50
+	};
+	checkTable(coshf, addr, tbl);
+	bench("cosh", coshf, addr);
+	SgDestroy(sg);
+}
