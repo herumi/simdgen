@@ -280,8 +280,10 @@ struct GeneratorBase {
 			case Inv:
 #ifdef SG_X64
 				fi.constTbl.push_back(f2u(2.0));
-#endif
 				fi.tmpRegN = 1;
+#else
+				fi.tmpRegN = 2;
+#endif
 				fi.tmpMaskN = 0;
 				break;
 			case Exp:

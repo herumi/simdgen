@@ -155,11 +155,18 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	{
 		if (debug) printf("inv z%d\n", inout);
 		IndexRangeManager ftr(funcTmpReg_);
-		const ZReg t1(ftr.allocIdx());
-		fcpy(t1.s, p0, 1.0);
+		ZRegSVec t0, t1, t2;
 		for (int i = 0; i < n; i++) {
-			fdivr(ZReg(inout + i).s, p0, t1.s);
+			t0.push_back(ZRegS(inout + i));
+			t1.push_back(ZRegS(ftr.allocIdx()));
+			t2.push_back(ZRegS(ftr.allocIdx()));
 		}
+		for (int i = 0; i < n; i++) frecpe(t1[i], t0[i]);
+		for (int i = 0; i < n; i++) frecps(t2[i], t0[i], t1[i]);
+		for (int i = 0; i < n; i++) fmul(t1[i], t1[i], t2[i]);
+
+		for (int i = 0; i < n; i++) frecps(t2[i], t0[i], t1[i]);
+		for (int i = 0; i < n; i++) fmul(t0[i], t1[i], t2[i]);
 	}
 	void gen_exp(int inout, int n)
 	{
