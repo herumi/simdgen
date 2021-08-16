@@ -278,7 +278,9 @@ struct GeneratorBase {
 			FuncInfo& fi = funcInfoTbl[i];
 			switch (i) {
 			case Inv:
-				fi.constTbl.push_back(f2u(1.0));
+#ifdef SG_X64
+				fi.constTbl.push_back(f2u(2.0));
+#endif
 				fi.tmpRegN = 1;
 				fi.tmpMaskN = 0;
 				break;

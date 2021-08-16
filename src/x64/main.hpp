@@ -163,9 +163,16 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	void gen_inv(int inout, int n)
 	{
 		if (debug) printf("inv z%d\n", inout);
+		const Zmm two(getFloatIdx(2.0));
+		IndexRangeManager ftr(funcTmpReg_);
+		ZmmVec t0, t1;
 		for (int i = 0; i < n; i++) {
-			vdivps(Zmm(inout + i), Zmm(getConstIdx(f2u(1.0))), Zmm(inout + i));
+			t0.push_back(Zmm(inout + i));
+			t1.push_back(Zmm(ftr.allocIdx()));
 		}
+		for (int i = 0; i < n; i++) vrcp14ps(t1[i], t0[i]);
+		for (int i = 0; i < n; i++) vfnmadd213ps(t0[i], t1[i], two);
+		for (int i = 0; i < n; i++) vmulps(t0[i], t0[i], t1[i]);
 	}
 	void gen_exp(int inout, int n)
 	{
