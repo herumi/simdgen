@@ -136,3 +136,18 @@ CYBOZU_TEST_AUTO(log)
 	SgDestroy(sg);
 }
 
+float inv(float x) { return 1 / x; }
+
+CYBOZU_TEST_AUTO(inv)
+{
+	SgCode *sg = SgCreate();
+	SgFuncFloat1 *addr = SgGetFuncFloat1(sg, "x", "inv(x)");
+	const float tbl[] = {
+		-FLT_MIN, -0.5, -1, -5.3, -80, -100, -1000, -FLT_MAX,
+		FLT_MIN, 0.5, 1, 5.3, 80, 100, 1000, FLT_MAX
+	};
+	checkTable(inv, addr, tbl);
+	bench("inv", inv, addr);
+	SgDestroy(sg);
+}
+
