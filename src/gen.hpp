@@ -44,7 +44,7 @@ struct IndexRange {
 };
 
 struct IndexRangeManager {
-	IndexRange ir_;
+	IndexRange& ir_;
 	int cur_;
 	IndexRangeManager(IndexRange& ir)
 		 : ir_(ir)
