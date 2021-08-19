@@ -41,6 +41,7 @@ struct IndexRange {
 	int getSize() const { return n_; }
 	int getMax() const { return offset_ + n_; }
 	void setOffset(int offset) { offset_ = offset; }
+	int getOffset() const { return offset_; }
 };
 
 struct IndexRangeManager {
@@ -66,6 +67,12 @@ struct GeneratorBase {
 	FuncInfo funcInfoTbl[FuncTypeN];
 	int simdByte_;
 	int unrollN_;
+	/*
+		0, ..., varN_ ; var
+		varN_, ..., varN_ + constN_ ; const
+		varN_ + constN_, ..., varN_ + constN_ + regN * unrollN_ ; tmp reg in func
+		varN_ + constN_ + regN * unrollN_, ..., varN_ + constN_ + regN * unrollN_ + maxTmpN_; stack tmp reg
+	*/
 	uint32_t varN_; // # variables
 	uint32_t constN_; // # constants
 	IndexRange funcTmpReg_;
@@ -109,6 +116,13 @@ struct GeneratorBase {
 	uint32_t getTmpOffset() const { return varN_ + constN_ + funcTmpReg_.getSize(); }
 	int getTmpIdx(int i) const { return getTmpOffset() + i; }
 	uint32_t getTotalNum() const { return getTmpOffset() + maxTmpN_; }
+	void putLayout() const
+	{
+		printf("var       %d, ..., %d\n", 0, varN_);
+		printf("const     %d, ..., %d\n", varN_, varN_ + constN_);
+		printf("funcTmp   %d, ..., %d\n", funcTmpReg_.getOffset(), funcTmpReg_.getOffset() + funcTmpReg_.getSize());
+		printf("stack reg %d, ..., %d\n", getTmpOffset(), getTotalNum());
+	}
 
 	uint32_t getConstIdx(uint32_t u) const
 	{
