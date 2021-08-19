@@ -211,18 +211,21 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		if (debug) printf("cosh z%d\n", inout);
 		const Zmm f0p5(getFloatIdx(0.5));
 		const Zmm x7fffffff(getFloatIdx(u2f(0x7fffffff)));
+		ZmmVec t0;
+		for (int i = 0; i < n; i++) {
+			t0.push_back(Zmm(inout + i));
+		}
 		/*
 			X = exp(|x|)
 			cosh(x) = (X + 1/X) * 0.5
 		*/
 		for (int i = 0; i < n; i++) {
-			vandps(Zmm(inout + i), Zmm(inout + i), x7fffffff);
+			vandps(t0[i], t0[i], x7fffffff);
 		}
 		gen_exp(inout, n);
 		IndexRangeManager ftr(funcTmpReg_);
-		ZmmVec t0, t1;
+		ZmmVec t1;
 		for (int i = 0; i < n; i++) {
-			t0.push_back(Zmm(inout + i));
 			t1.push_back(Zmm(ftr.allocIdx()));
 			vmovaps(t1[i], t0[i]);
 		}
