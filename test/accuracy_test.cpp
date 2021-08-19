@@ -151,12 +151,6 @@ CYBOZU_TEST_AUTO(inv)
 	SgDestroy(sg);
 }
 
-#if 0
-float f(float x)
-{
-	return 1/exp(abs(x));
-}
-
 CYBOZU_TEST_AUTO(cosh)
 {
 	SgCode *sg = SgCreate();
@@ -164,8 +158,8 @@ CYBOZU_TEST_AUTO(cosh)
 	const float tbl[] = {
 		-20, -10, -3, -2, -0.3, 0, 0.4, 1, 2, 3, 10, 20
 	};
-	checkTable(f, addr, tbl);
-//	bench("cosh", coshf, addr);
+	checkTable(coshf, addr, tbl);
+	bench("cosh", coshf, addr);
 	SgDestroy(sg);
 }
-#endif
+

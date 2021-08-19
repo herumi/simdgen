@@ -208,6 +208,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	}
 	void gen_cosh(int inout, int n)
 	{
+		if (debug) printf("cosh z%d\n", inout);
 		const Zmm f0p5(getFloatIdx(0.5));
 		const Zmm x7fffffff(getFloatIdx(u2f(0x7fffffff)));
 		/*
@@ -231,7 +232,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	}
 	void gen_log(int inout, int n)
 	{
-		printf("gen_log %d\n", inout);
+		if (debug) printf("gen_log %d\n", inout);
 		const Zmm i127shl23(getFloatIdx(u2f(g_logTbl.i127shl23)));
 		const Zmm x7fffff(getFloatIdx(u2f(g_logTbl.x7fffff)));
 		const Zmm x7fffffff(getFloatIdx(u2f(g_logTbl.x7fffffff)));
