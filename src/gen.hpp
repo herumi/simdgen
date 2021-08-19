@@ -328,6 +328,8 @@ struct GeneratorBase {
 #ifdef SG_X64
 				fi.constTbl.push_back(f2u(2.0));
 				fi.constTbl.push_back(0x7fffffff);
+#else
+				fi.tmpRegN++;
 #endif
 				break;
 			case Log:

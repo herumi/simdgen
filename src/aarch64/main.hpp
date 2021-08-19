@@ -206,6 +206,31 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		for (int i = 0; i < n; i++) fmad(t0[i], p0, t2[i], one);
 		for (int i = 0; i < n; i++) fmul(t0[i], t1[i], t0[i]);
 	}
+	void gen_cosh(int inout, int n)
+	{
+		if (debug) printf("cosh z%d\n", inout);
+		ZRegSVec t0;
+		for (int i = 0; i < n; i++) {
+			t0.push_back(ZRegS(inout + i));
+		}
+		/*
+			X = exp(|x|)
+			cosh(x) = (X + 1/X) * 0.5
+		*/
+		for (int i = 0; i < n; i++) {
+			fabs(t0[i], p0, t0[i]);
+		}
+		gen_exp(inout, n);
+		IndexRangeManager ftr(funcTmpReg_);
+		ZRegSVec t1;
+		for (int i = 0; i < n; i++) {
+			t1.push_back(ZRegS(ftr.allocIdx()));
+			mov(t1[i], p0, t0[i]);
+		}
+		gen_inv(t1[0].getIdx(), n);
+		for (int i = 0; i < n; i++) fadd(t0[i], t0[i], t1[i]);
+		for (int i = 0; i < n; i++) fmul(t0[i], p0, 0.5);
+	}
 	void gen_log(int inout, int n)
 	{
 		printf("gen_log %d\n", inout);
