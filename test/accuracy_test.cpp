@@ -14,7 +14,7 @@ void loop(float (*f)(float), float *dst, const float *src, size_t n)
 	}
 }
 
-void bench(const char *msg, float (*f)(float), SgFuncFloat1 *g)
+void bench(const char *msg, float (*f)(float), SgFuncFloat1 g)
 {
 	printf("%s\n", msg);
 	clock_t begin, end;
@@ -44,7 +44,7 @@ float diff(float x, float y)
 	return std::fabs(x) < 1e-10 ? d : d / x;
 }
 
-void checkRange(float (*f)(float), SgFuncFloat1 *g, float begin, float end, float step)
+void checkRange(float (*f)(float), SgFuncFloat1 g, float begin, float end, float step)
 {
 	floatVec dst, src;
 	float maxe = 0;
@@ -88,7 +88,7 @@ void checkRange(float (*f)(float), SgFuncFloat1 *g, float begin, float end, floa
 }
 
 template<size_t N>
-void checkTable(float (*f)(float), SgFuncFloat1 *g, const float (&tbl)[N])
+void checkTable(float (*f)(float), SgFuncFloat1 g, const float (&tbl)[N])
 {
 	float dst[N];
 	g(dst, tbl, N);
@@ -108,7 +108,7 @@ void checkTable(float (*f)(float), SgFuncFloat1 *g, const float (&tbl)[N])
 CYBOZU_TEST_AUTO(exp)
 {
 	SgCode *sg = SgCreate();
-	SgFuncFloat1 *addr = SgGetFuncFloat1(sg, "x", "exp(x)");
+	SgFuncFloat1 addr = SgGetFuncFloat1(sg, "x", "exp(x)");
 	if (addr == 0) {
 		CYBOZU_TEST_ASSERT(false);
 		return;
@@ -127,7 +127,7 @@ CYBOZU_TEST_AUTO(exp)
 CYBOZU_TEST_AUTO(log)
 {
 	SgCode *sg = SgCreate();
-	SgFuncFloat1 *addr = SgGetFuncFloat1(sg, "x", "log(x)");
+	SgFuncFloat1 addr = SgGetFuncFloat1(sg, "x", "log(x)");
 	if (addr == 0) {
 		CYBOZU_TEST_ASSERT(false);
 		return;
@@ -149,7 +149,7 @@ float inv(float x) { return 1 / x; }
 CYBOZU_TEST_AUTO(inv)
 {
 	SgCode *sg = SgCreate();
-	SgFuncFloat1 *addr = SgGetFuncFloat1(sg, "x", "inv(x)");
+	SgFuncFloat1 addr = SgGetFuncFloat1(sg, "x", "inv(x)");
 	if (addr == 0) {
 		CYBOZU_TEST_ASSERT(false);
 		return;
@@ -166,7 +166,7 @@ CYBOZU_TEST_AUTO(inv)
 CYBOZU_TEST_AUTO(cosh)
 {
 	SgCode *sg = SgCreate();
-	SgFuncFloat1 *addr = SgGetFuncFloat1(sg, "x", "cosh(x)");
+	SgFuncFloat1 addr = SgGetFuncFloat1(sg, "x", "cosh(x)");
 	if (addr == 0) {
 		CYBOZU_TEST_ASSERT(false);
 		return;

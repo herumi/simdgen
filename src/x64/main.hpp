@@ -24,7 +24,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	static const size_t dataSize = 4096;
 	static const size_t codeSize = 8192;
 	static const size_t totalSize = dataSize + codeSize;
-	SgFuncFloat1 *addr_;
+	SgFuncFloat1 addr_;
 	Label dataL_;
 	Reg64 dataReg_;
 
@@ -40,7 +40,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	{
 		setProtectModeRW();
 	}
-	SgFuncFloat1* getAddrFloat1() const { return addr_; }
+	SgFuncFloat1 getAddrFloat1() const { return addr_; }
 	void exec(const sg::TokenList& tl)
 	{
 		if (debug) puts("x64/exec");
@@ -56,7 +56,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			dd(constIdx_.getVal(i));
 		}
 		setSize(dataSize);
-		addr_ = getCurr<SgFuncFloat1*>();
+		addr_ = getCurr<SgFuncFloat1>();
 		{
 			int keepN = 0;
 			if (totalN_ > maxFreeN) keepN = totalN_ - maxFreeN;

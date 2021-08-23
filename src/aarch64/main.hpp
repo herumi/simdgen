@@ -29,7 +29,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	static const size_t dataSize = 4096;
 	static const size_t codeSize = 8192;
 	static const size_t totalSize = dataSize + codeSize;
-	SgFuncFloat1 *addr_;
+	SgFuncFloat1 addr_;
 	Label dataL_;
 	XReg dataReg_;
 	XReg tmpX_;
@@ -47,7 +47,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		simdByte_ = 512 / 8;
 		setFuncInfoTbl();
 	}
-	SgFuncFloat1* getAddrFloat1() const { return addr_; }
+	SgFuncFloat1 getAddrFloat1() const { return addr_; }
 	void exec(const sg::TokenList& tl)
 	{
 		if (debug) puts("aarch64/exec");
@@ -57,7 +57,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			dd(constIdx_.getVal(i));
 		}
 		setSize(dataSize);
-		addr_ = getCurr<SgFuncFloat1*>();
+		addr_ = getCurr<SgFuncFloat1>();
 
 		adr(dataReg_, dataL);
 		ptrue(p0.s);

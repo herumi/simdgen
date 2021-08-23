@@ -28,7 +28,7 @@ void SgDestroy(SgCode *sg)
 	delete sg;
 }
 
-SgFuncFloat1* SgGetFuncFloat1(SgCode *sg, const char *varName, const char *src)
+SgFuncFloat1 SgGetFuncFloat1(SgCode *sg, const char *varName, const char *src)
 	try
 {
 	sg::TokenList tl;

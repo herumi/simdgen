@@ -19,7 +19,7 @@ int main()
 {
 	const char *src = "log(exp(x) + 3)";
 	SgCode *sg = SgCreate();
-	SgFuncFloat1* addr = SgGetFuncFloat1(sg, "x", src);
+	SgFuncFloat1 addr = SgGetFuncFloat1(sg, "x", src);
 	if (addr == 0) {
 		return 1;
 	}
