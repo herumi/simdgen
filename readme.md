@@ -82,6 +82,7 @@ gcc t.c -I ./src -L ./lib -lsimdgen
 - inv
 - exp
 - log
+- cosh
 
 ## License
 
