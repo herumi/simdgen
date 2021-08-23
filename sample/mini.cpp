@@ -20,6 +20,9 @@ int main()
 	const char *src = "log(exp(x) + 3)";
 	SgCode *sg = SgCreate();
 	SgFuncFloat1* addr = SgGetFuncFloat1(sg, "x", src);
+	if (addr == 0) {
+		return 1;
+	}
 	clock_t begin, end;
 	const size_t N = 4000;
 	const size_t C = 10000;

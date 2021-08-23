@@ -16,8 +16,11 @@ struct SgCode {
 };
 
 SgCode* SgCreate()
+	try
 {
 	return new SgCode();
+} catch (std::exception& e) {
+	return 0;
 }
 
 void SgDestroy(SgCode *sg)
@@ -38,5 +41,4 @@ SgFuncFloat1* SgGetFuncFloat1(SgCode *sg, const char *varName, const char *src)
 	fprintf(stderr, "SgGetFuncFloat1 %s\n", e.what());
 	return 0;
 }
-
 

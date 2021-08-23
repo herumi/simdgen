@@ -109,6 +109,10 @@ CYBOZU_TEST_AUTO(exp)
 {
 	SgCode *sg = SgCreate();
 	SgFuncFloat1 *addr = SgGetFuncFloat1(sg, "x", "exp(x)");
+	if (addr == 0) {
+		CYBOZU_TEST_ASSERT(false);
+		return;
+	}
 	const float limitTbl[] = {
 		-1000, -100, -80, -5.3, -1, -FLT_MIN, 0, FLT_MIN, 0.5, 1,  5.3, 80 //, 100, 1000, FLT_MAX
 	};
@@ -124,6 +128,10 @@ CYBOZU_TEST_AUTO(log)
 {
 	SgCode *sg = SgCreate();
 	SgFuncFloat1 *addr = SgGetFuncFloat1(sg, "x", "log(x)");
+	if (addr == 0) {
+		CYBOZU_TEST_ASSERT(false);
+		return;
+	}
 	const float limitTbl[] = {
 		FLT_MIN, 0.5, 1,  5.3, 80, 100, 1000, FLT_MAX
 	};
@@ -142,6 +150,10 @@ CYBOZU_TEST_AUTO(inv)
 {
 	SgCode *sg = SgCreate();
 	SgFuncFloat1 *addr = SgGetFuncFloat1(sg, "x", "inv(x)");
+	if (addr == 0) {
+		CYBOZU_TEST_ASSERT(false);
+		return;
+	}
 	const float tbl[] = {
 		-FLT_MIN, -0.5, -1, -5.3, -80, -100, -1000, -FLT_MAX,
 		FLT_MIN, 0.5, 1, 5.3, 80, 100, 1000, FLT_MAX
@@ -155,6 +167,10 @@ CYBOZU_TEST_AUTO(cosh)
 {
 	SgCode *sg = SgCreate();
 	SgFuncFloat1 *addr = SgGetFuncFloat1(sg, "x", "cosh(x)");
+	if (addr == 0) {
+		CYBOZU_TEST_ASSERT(false);
+		return;
+	}
 	const float tbl[] = {
 		-20, -10, -3, -2, -0.3, 0, 0.4, 1, 2, 3, 10, 20
 	};
