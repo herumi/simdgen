@@ -249,19 +249,16 @@ struct GeneratorBase {
 		const int tmpMin = getTmpOffset();
 		int tmpPos = tmpMin;
 		for (size_t i = 0; i < n; i++) {
-printf("i=%zd stackPos=%d\n", i, stackPos);
 			const Value& v = vv[i];
 			switch (v.type) {
 			case Var:
 				for (int i = 0; i < unrollN; i++) {
 					stack[stackPos++] = getVarIdxOffset() + v.v + i;
-printf("Var stack[%d]=%d\n", stackPos-1, stack[stackPos-1]);
 				}
 				break;
 			case Const:
 				for (int i = 0; i < unrollN; i++) {
 					stack[stackPos++] = getConstIdxOffset() + constIdx_.getIdx(v.v);
-printf("Const stack[%d]=%d\n", stackPos-1, stack[stackPos-1]);
 				}
 				break;
 			case Op:
@@ -269,7 +266,6 @@ printf("Const stack[%d]=%d\n", stackPos-1, stack[stackPos-1]);
 					int dst = 0;
 					int src1 = stack[stackPos - unrollN * 2 + i];
 					int src2 = stack[stackPos - unrollN + i];
-printf("op src1=%d src2=%d\n", src1, src2);
 					if (src1 < tmpMin) {
 						if (src2 < tmpMin) {
 							dst = tmpPos++;
@@ -285,7 +281,6 @@ printf("op src1=%d src2=%d\n", src1, src2);
 						}
 					}
 					stack[stackPos - unrollN * 2 + i] = dst;
-printf("dst=%d\n", stack[stackPos - unrollN * 2 + i]);
 					switch (v.v) {
 					case Add: gen_add(dst, src1, src2); break;
 					case Sub: gen_sub(dst, src1, src2); break;
