@@ -242,52 +242,85 @@ struct GeneratorBase {
 	{
 		const sg::ValueVec& vv = tl.getValueVec();
 		const size_t n = vv.size();
-		uint32_t pos = getTmpOffset();
+		/*
+		*/
+		int stack[32];
+		int stackPos = 0;
+		const int tmpMin = getTmpOffset();
+		int tmpPos = tmpMin;
 		for (size_t i = 0; i < n; i++) {
+printf("i=%zd stackPos=%d\n", i, stackPos);
 			const Value& v = vv[i];
 			switch (v.type) {
 			case Var:
 				for (int i = 0; i < unrollN; i++) {
-					gen_copy(pos + i, getVarIdxOffset() + v.v + i);
+					stack[stackPos++] = getVarIdxOffset() + v.v + i;
+printf("Var stack[%d]=%d\n", stackPos-1, stack[stackPos-1]);
 				}
-				pos += unrollN;
 				break;
 			case Const:
 				for (int i = 0; i < unrollN; i++) {
-					gen_copy(pos + i, getConstIdxOffset() + constIdx_.getIdx(v.v));
+					stack[stackPos++] = getConstIdxOffset() + constIdx_.getIdx(v.v);
+printf("Const stack[%d]=%d\n", stackPos-1, stack[stackPos-1]);
 				}
-				pos += unrollN;
 				break;
 			case Op:
-				assert(pos > unrollN);
-				pos -= unrollN;
 				for (int i = 0; i < unrollN; i++) {
-					int dst = pos - unrollN + i;
-					int src = pos + i;
+					int dst = 0;
+					int src1 = stack[stackPos - unrollN * 2 + i];
+					int src2 = stack[stackPos - unrollN + i];
+printf("op src1=%d src2=%d\n", src1, src2);
+					if (src1 < tmpMin) {
+						if (src2 < tmpMin) {
+							dst = tmpPos++;
+						} else {
+							dst = src2;
+						}
+					} else {
+						if (src2 < tmpMin) {
+							dst = src1;
+							tmpPos--;
+						} else {
+							dst = src1;
+						}
+					}
+					stack[stackPos - unrollN * 2 + i] = dst;
+printf("dst=%d\n", stack[stackPos - unrollN * 2 + i]);
 					switch (v.v) {
-					case Add: gen_add(dst, dst, src); break;
-					case Sub: gen_sub(dst, dst, src); break;
-					case Mul: gen_mul(dst, dst, src); break;
-					case Div: gen_div(dst, dst, src); break;
+					case Add: gen_add(dst, src1, src2); break;
+					case Sub: gen_sub(dst, src1, src2); break;
+					case Mul: gen_mul(dst, src1, src2); break;
+					case Div: gen_div(dst, src1, src2); break;
 					default:
 						throw cybozu::Exception("bad op") << i << v.v;
 					}
+					stackPos -= unrollN;
 				}
 				break;
 			case Func:
-				assert(pos > 0);
-				switch (v.v) {
-				case Inv: gen_inv(pos - unrollN, unrollN); break;
-				case Exp: gen_exp(pos - unrollN, unrollN); break;
-				case Log: gen_log(pos - unrollN, unrollN); break;
-				case Cosh: gen_cosh(pos - unrollN, unrollN); break;
-				case Tanh: gen_tanh(pos - unrollN, unrollN); break;
-				default:
-					throw cybozu::Exception("bad func") << i << pos << v.v;
+				{
+					int pos = stack[stackPos - unrollN];
+					if (pos < tmpMin) {
+						for (int i = 0; i < unrollN; i++) {
+							gen_copy(tmpPos, pos + i);
+							stack[stackPos - unrollN + i] = tmpPos;
+							tmpPos++;
+						}
+						pos = stack[stackPos - unrollN];
+					}
+					switch (v.v) {
+					case Inv: gen_inv(pos, unrollN); break;
+					case Exp: gen_exp(pos, unrollN); break;
+					case Log: gen_log(pos, unrollN); break;
+					case Cosh: gen_cosh(pos, unrollN); break;
+					case Tanh: gen_tanh(pos, unrollN); break;
+					default:
+						throw cybozu::Exception("bad func") << i << pos << v.v;
+					}
 				}
 				break;
 			default:
-				throw cybozu::Exception("bad type") << i << pos << v.type;
+				throw cybozu::Exception("bad type") << i << stackPos << v.type;
 			}
 		}
 	}
