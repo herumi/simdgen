@@ -41,6 +41,7 @@ enum FuncType {
 	Log,
 	Cosh,
 	Tanh,
+	RedSum,
 	FuncTypeN
 };
 
@@ -52,6 +53,7 @@ inline const char* getFuncName(size_t i)
 		"log",
 		"cosh",
 		"tanh",
+		"red_sum",
 	};
 	if (i >= CYBOZU_NUM_OF_ARRAY(tbl)) {
 		throw cybozu::Exception("bad Func") << i;

@@ -16,6 +16,7 @@ CYBOZU_TEST_AUTO(print)
 	sg::GeneratorBase gen;
 	gen.debug = true;
 	gen.exec(tl);
+	gen.putLayout();
 }
 
 int main(int argc, char *argv[])

@@ -13,9 +13,11 @@ struct FuncInfo {
 	IntVec constTbl;
 	int tmpRegN; // # of regs used temporary
 	int tmpMaskN; // # of mask regs used temporary
+	bool reduce; // such as sum, max, min, mean
 	FuncInfo()
 		: tmpRegN(0)
 		, tmpMaskN(0)
+		, reduce(false)
 	{
 	}
 };
@@ -80,6 +82,7 @@ struct GeneratorBase {
 	uint32_t maxTmpN_; // max # of regs in evaluation
 	int totalN_;
 	uint32_t curMaskTmpIdx_;
+	bool reduce_;
 	bool debug;
 	GeneratorBase()
 		: simdByte_(32 / 8) // one float
@@ -89,6 +92,7 @@ struct GeneratorBase {
 		, maxTmpN_(0)
 		, totalN_(0)
 		, curMaskTmpIdx_(0)
+		, reduce_(false)
 		, debug(false)
 	{
 		const char *env = getenv("SG_OPT");
@@ -112,6 +116,7 @@ struct GeneratorBase {
 	}
 	int getVarIdxOffset() const { return 0; }
 	int getVarIdx(int i) const { return getVarIdxOffset() + i; }
+	int getReduceVarIdx() const { return getVarIdxOffset() + varN_ - unrollN_; }
 	uint32_t getConstIdxOffset() const { return varN_; }
 	uint32_t getTmpOffset() const { return varN_ + constN_ + funcTmpReg_.getSize(); }
 	int getTmpIdx(int i) const { return getTmpOffset() + i; }
@@ -147,6 +152,7 @@ struct GeneratorBase {
 		*/
 		int regN = 0;
 		int maskN = 0;
+		reduce_ = false;
 		for (int i = 0; i < sg::FuncTypeN; i++) {
 			if (!tl.isUsedFunc(i)) continue;
 			const FuncInfo& fi = funcInfoTbl[i];
@@ -156,11 +162,18 @@ struct GeneratorBase {
 			}
 			if (fi.tmpRegN > regN) regN = fi.tmpRegN;
 			if (fi.tmpMaskN > maskN) maskN = fi.tmpMaskN;
+			if (fi.reduce) {
+				if (reduce_) throw cybozu::Exception("use twice reduce func");
+				reduce_ = true;
+			}
 		}
 		funcTmpReg_.setSize(regN * unrollN_);
 		funcTmpMask_.setSize(maskN * unrollN_);
 
 		varN_ = tl.getVarNum() * unrollN_;
+		if (reduce_) {
+			varN_ += unrollN_;
+		}
 		constN_ = constIdx_.size();
 		funcTmpReg_.setOffset(varN_ + constN_);
 		funcTmpMask_.setOffset(1 + 1); // mask0 and mask1 are reserved
@@ -180,6 +193,7 @@ struct GeneratorBase {
 	virtual void exec(const sg::TokenList& tl)
 	{
 		if (debug) puts("init of GeneratorBase");
+		setFuncInfoTbl();
 		updateConstIdx(tl);
 		gen_setConst();
 		puts("execOneLoop");
@@ -236,6 +250,10 @@ struct GeneratorBase {
 	virtual void gen_tanh(int inout, int n)
 	{
 		if (debug) printf("tanh z%d (%d)\n", inout, n);
+	}
+	virtual void gen_red_sum(int red, int inout, int n)
+	{
+		if (debug) printf("red_sum z%d+=z%d (%d)\n", red, inout, n);
 	}
 	template<class TL>
 	void execOneLoop(const TL& tl, int unrollN)
@@ -309,6 +327,7 @@ struct GeneratorBase {
 					case Log: gen_log(pos, unrollN); break;
 					case Cosh: gen_cosh(pos, unrollN); break;
 					case Tanh: gen_tanh(pos, unrollN); break;
+					case RedSum: gen_red_sum(getReduceVarIdx(), pos, unrollN); break;
 					default:
 						throw cybozu::Exception("bad func") << i << pos << v.v;
 					}
@@ -376,6 +395,10 @@ struct GeneratorBase {
 				}
 				fi.tmpRegN = LogTbl::tmpRegN;
 				fi.tmpMaskN = LogTbl::tmpMaskN;
+				break;
+			case RedSum:
+				fi.reduce = true;
+				break;
 			default:
 				break;
 			}
