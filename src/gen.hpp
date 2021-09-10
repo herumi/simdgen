@@ -82,7 +82,7 @@ struct GeneratorBase {
 	uint32_t maxTmpN_; // max # of regs in evaluation
 	int totalN_;
 	uint32_t curMaskTmpIdx_;
-	bool reduce_;
+	int reduceFuncType_;
 	bool debug;
 	GeneratorBase()
 		: simdByte_(32 / 8) // one float
@@ -92,7 +92,7 @@ struct GeneratorBase {
 		, maxTmpN_(0)
 		, totalN_(0)
 		, curMaskTmpIdx_(0)
-		, reduce_(false)
+		, reduceFuncType_(-1)
 		, debug(false)
 	{
 		const char *env = getenv("SG_OPT");
@@ -152,7 +152,7 @@ struct GeneratorBase {
 		*/
 		int regN = 0;
 		int maskN = 0;
-		reduce_ = false;
+		reduceFuncType_ = -1;
 		for (int i = 0; i < sg::FuncTypeN; i++) {
 			if (!tl.isUsedFunc(i)) continue;
 			const FuncInfo& fi = funcInfoTbl[i];
@@ -163,15 +163,15 @@ struct GeneratorBase {
 			if (fi.tmpRegN > regN) regN = fi.tmpRegN;
 			if (fi.tmpMaskN > maskN) maskN = fi.tmpMaskN;
 			if (fi.reduce) {
-				if (reduce_) throw cybozu::Exception("use twice reduce func");
-				reduce_ = true;
+				if (reduceFuncType_ >= 0) throw cybozu::Exception("use twice reduce func");
+				reduceFuncType_ = i;
 			}
 		}
 		funcTmpReg_.setSize(regN * unrollN_);
 		funcTmpMask_.setSize(maskN * unrollN_);
 
 		varN_ = tl.getVarNum() * unrollN_;
-		if (reduce_) {
+		if (reduceFuncType_) {
 			varN_ += unrollN_;
 		}
 		constN_ = constIdx_.size();
@@ -214,6 +214,10 @@ struct GeneratorBase {
 	virtual void gen_copy(int dst, int src)
 	{
 		if (debug) printf("copy z%d, z%d\n", dst, src);
+	}
+	virtual void gen_reduce(int dst, int src, int funcType)
+	{
+		if (debug) printf("%s z%d, z%d\n", getFuncName(funcType), dst, src);
 	}
 	virtual void gen_add(int dst, int src1, int src2)
 	{

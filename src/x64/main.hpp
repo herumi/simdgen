@@ -41,6 +41,14 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		setProtectModeRW();
 	}
 	SgFuncFloat1 getAddrFloat1() const { return addr_; }
+	void outputOne(const Reg64& dst, int i, const Opmask& k = util::k0)
+	{
+		if (reduceFuncType_ >= 0) {
+			gen_reduce(getReduceVarIdx() + i, getTmpIdx(i), reduceFuncType_);
+		} else {
+			vmovups(ptr[dst + i * simdByte_]|k, Zmm(getTmpIdx(i)));
+		}
+	}
 	void exec(const sg::TokenList& tl)
 	{
 		if (debug) puts("x64/exec");
@@ -71,6 +79,12 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			dataReg_ = sf.t[0];
 			mov(dataReg_, (size_t)dataL.getAddress());
 			gen_setConst();
+			if (reduceFuncType_ >= 0) {
+				for (int i = 0; i < unrollN_; i++) {
+					Zmm red(getReduceVarIdx() + i);
+					vxorps(red, red);
+				}
+			}
 
 			Label cmp1L, cmp2L, exitL;
 			jmp(cmp1L, T_NEAR);
@@ -81,7 +95,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			}
 			execOneLoop(tl, unrollN_);
 			for (int i = 0; i < unrollN_; i++) {
-				vmovups(ptr[dst + i * simdByte_], Zmm(getTmpIdx(i)));
+				outputOne(dst, i);
 			}
 			add(src, 64 * unrollN_);
 			add(dst, 64 * unrollN_);
@@ -96,7 +110,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			Label lp2 = L();
 				vmovups(Zmm(getVarIdx(0)), ptr[src]);
 				execOneLoop(tl, 1);
-				vmovups(ptr[dst], Zmm(getTmpIdx(0)));
+				outputOne(dst, 0);
 				add(src, 64);
 				add(dst, 64);
 				sub(n, 16);
@@ -115,7 +129,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			kmovd(k1, eax);
 			vmovups(Zmm(getVarIdx(0))|k1|T_z, ptr[src]);
 			execOneLoop(tl, 1);
-			vmovups(ptr[dst]|k1, Zmm(getTmpIdx(0)));
+			outputOne(dst, 0, k1);
 		L(exitL);
 			// restore regs
 			for (int i = 0; i < keepN; i++) {
