@@ -41,10 +41,47 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		setProtectModeRW();
 	}
 	SgFuncFloat1 getAddrFloat1() const { return addr_; }
+
+	void gen_reduce(int dst, int src1, int src2)
+	{
+		switch (reduceFuncType_) {
+		case RedSum: gen_add(dst, src1, src2); break;
+		default:
+			throw cybozu::Exception("gen_reduce:bad reduceFuncType_") << reduceFuncType_;
+		}
+	}
+	// x[0] = sum(x[0:...15]) using t
+	void reduceOne_sum(int x, int t)
+	{
+		vextractf64x4(Ymm(t), Zmm(x), 1);
+		vaddps(Ymm(t), Ymm(t), Ymm(x));
+		vextractf128(Xmm(x), Ymm(t), 1);
+		vaddps(Xmm(t), Xmm(x), Xmm(t));
+		vpermilps(Xmm(x), Xmm(t), 0x4e);
+		vaddps(Xmm(x), Xmm(x), Xmm(t));
+		vmovaps(Xmm(t), Xmm(x));
+		vshufps(Xmm(x), Xmm(x), Xmm(x), 0x55);
+		vaddss(Xmm(x), Xmm(t), Xmm(x));
+	}
+	void reduceAll()
+	{
+		int dst = getReduceVarIdx();
+		int src = getTmpIdx(0);
+		for (int i = 1; i < unrollN_; i++) {
+			gen_reduce(dst, dst, src + i);
+		}
+		switch (reduceFuncType_) {
+		case RedSum: reduceOne_sum(dst, src); break;
+		default:
+			throw cybozu::Exception("reduce:bad reduceFuncType_") << reduceFuncType_;
+		}
+	}
 	void outputOne(const Reg64& dst, int i, const Opmask& k = util::k0)
 	{
 		if (reduceFuncType_ >= 0) {
-			gen_reduce(getReduceVarIdx() + i, getTmpIdx(i), reduceFuncType_);
+			int dst = getReduceVarIdx() + i;
+			int src = getTmpIdx(i);
+			gen_reduce(dst, dst, src);
 		} else {
 			vmovups(ptr[dst + i * simdByte_]|k, Zmm(getTmpIdx(i)));
 		}
@@ -73,9 +110,10 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			for (int i = 0; i < keepN; i++) {
 				vmovups(ptr[rsp + i * simdByte_], Zmm(maxFreeN + i));
 			}
-			const Reg64& dst = sf.p[0];
-			const Reg64& src = sf.p[1];
-			const Reg64& n = sf.p[2];
+			Reg64 dst, src, n;
+			dst = sf.p[0];
+			src = sf.p[1];
+			n = sf.p[2];
 			dataReg_ = sf.t[0];
 			mov(dataReg_, (size_t)dataL.getAddress());
 			gen_setConst();
@@ -131,6 +169,9 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			execOneLoop(tl, 1);
 			outputOne(dst, 0, k1);
 		L(exitL);
+			if (reduceFuncType_ >= 0) {
+				reduceAll();
+			}
 			// restore regs
 			for (int i = 0; i < keepN; i++) {
 				vmovups(Zmm(maxFreeN + i), ptr[rsp + i * simdByte_]);

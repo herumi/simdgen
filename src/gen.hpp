@@ -215,10 +215,6 @@ struct GeneratorBase {
 	{
 		if (debug) printf("copy z%d, z%d\n", dst, src);
 	}
-	virtual void gen_reduce(int dst, int src, int funcType)
-	{
-		if (debug) printf("%s z%d, z%d\n", getFuncName(funcType), dst, src);
-	}
 	virtual void gen_add(int dst, int src1, int src2)
 	{
 		if (debug) printf("add z%d, z%d, z%d\n", dst, src1, src2);
