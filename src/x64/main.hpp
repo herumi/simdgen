@@ -67,12 +67,12 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	void reduceAll()
 	{
 		int dst = getReduceVarIdx();
-		int src = getTmpIdx(0);
+		vmovaps(zm0, Zmm(dst));
 		for (int i = 1; i < unrollN_; i++) {
-			gen_reduce(dst, dst, src + i);
+			gen_reduce(0, 0, dst + i);
 		}
 		switch (reduceFuncType_) {
-		case RedSum: reduceOne_sum(dst, src); break;
+		case RedSum: reduceOne_sum(0, dst); break;
 		default:
 			throw cybozu::Exception("reduce:bad reduceFuncType_") << reduceFuncType_;
 		}
