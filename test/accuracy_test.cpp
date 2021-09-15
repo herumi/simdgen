@@ -179,3 +179,25 @@ CYBOZU_TEST_AUTO(cosh)
 	SgDestroy(sg);
 }
 
+CYBOZU_TEST_AUTO(red_sum)
+{
+	SgCode *sg = SgCreate();
+	SgFuncFloat1Reduce addr = SgGetFuncFloat1Reduce(sg, "x", "red_sum(x)");
+	if (addr == 0) {
+		CYBOZU_TEST_ASSERT(false);
+		return;
+	}
+	const size_t N = 10;
+	float tbl[N];
+	for (size_t i = 0; i < N; i++) {
+		tbl[i] = i + 1;
+	}
+	for (size_t n = 0; n <= N; n++) {
+printf("n=%zd\n", n);
+		float r = addr(tbl, n);
+		float ok = n * (n + 1) / 2;
+		CYBOZU_TEST_EQUAL(r, ok);
+	}
+	SgDestroy(sg);
+}
+
