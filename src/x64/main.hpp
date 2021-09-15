@@ -43,36 +43,35 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	SgFuncFloat1 getAddrFloat1() const { return (SgFuncFloat1)addr_; }
 	SgFuncFloat1Reduce getAddrFloat1Reduce() const { return (SgFuncFloat1Reduce)addr_; }
 
-	void gen_reduce(int dst, int src1, int src2)
+	void gen_reduce(int red, int src)
 	{
 		switch (reduceFuncType_) {
-		case RedSum: gen_add(dst, src1, src2); break;
+		case RedSum: gen_add(red, red, src); break;
 		default:
 			throw cybozu::Exception("gen_reduce:bad reduceFuncType_") << reduceFuncType_;
 		}
 	}
-	// x[0] = sum(x[0:...15]) using t
-	void reduceOne_sum(int x, int t)
+	// x[0] = sum(x[0:...15]) using s
+	void reduceOne_sum(int d, int s)
 	{
-		vextractf64x4(Ymm(t), Zmm(x), 1);
-		vaddps(Ymm(t), Ymm(t), Ymm(x));
-		vextractf128(Xmm(x), Ymm(t), 1);
-		vaddps(Xmm(t), Xmm(x), Xmm(t));
-		vpermilps(Xmm(x), Xmm(t), 0x4e);
-		vaddps(Xmm(x), Xmm(x), Xmm(t));
-		vmovaps(Xmm(t), Xmm(x));
-		vshufps(Xmm(x), Xmm(x), Xmm(x), 0x55);
-		vaddss(Xmm(x), Xmm(t), Xmm(x));
+		vextractf64x4(Ymm(d), Zmm(s), 1);
+		vaddps(Ymm(d), Ymm(s), Ymm(d));
+		vextractf128(Xmm(s), Ymm(d), 1);
+		vaddps(Xmm(d), Xmm(s), Xmm(d));
+		vpermilps(Xmm(s), Xmm(d), 0x4e);
+		vaddps(Xmm(s), Xmm(s), Xmm(d));
+		vmovaps(Xmm(d), Xmm(s));
+		vshufps(Xmm(s), Xmm(s), Xmm(s), 0x55);
+		vaddss(Xmm(d), Xmm(d), Xmm(s));
 	}
 	void reduceAll()
 	{
-		int dst = getReduceVarIdx();
-		vmovaps(zm0, Zmm(dst));
+		int red = getReduceVarIdx();
 		for (int i = 1; i < unrollN_; i++) {
-			gen_reduce(0, 0, dst + i);
+			gen_reduce(red, red + i);
 		}
 		switch (reduceFuncType_) {
-		case RedSum: reduceOne_sum(0, dst); break;
+		case RedSum: reduceOne_sum(0, red); break;
 		default:
 			throw cybozu::Exception("reduce:bad reduceFuncType_") << reduceFuncType_;
 		}
@@ -80,9 +79,9 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	void outputOne(const Reg64& dst, int i, const Opmask& k = util::k0)
 	{
 		if (reduceFuncType_ >= 0) {
-			int dst = getReduceVarIdx() + i;
+			int red = getReduceVarIdx() + i;
 			int src = getTmpIdx(i);
-			gen_reduce(dst, dst, src);
+			gen_reduce(red, src);
 		} else {
 			vmovups(ptr[dst + i * simdByte_]|k, Zmm(getTmpIdx(i)));
 		}

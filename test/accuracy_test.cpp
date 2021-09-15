@@ -193,6 +193,7 @@ CYBOZU_TEST_AUTO(red_sum)
 		tbl[i] = i + 1;
 	}
 	for (size_t n = 0; n <= N; n++) {
+printf("n=%zd\n", n);
 		float r = addr(tbl, n);
 		float ok = n * (n + 1) / 2;
 		CYBOZU_TEST_EQUAL(r, ok);

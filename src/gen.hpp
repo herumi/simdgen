@@ -251,10 +251,6 @@ struct GeneratorBase {
 	{
 		if (debug) printf("tanh z%d (%d)\n", inout, n);
 	}
-	virtual void gen_red_sum(int red, int inout, int n)
-	{
-		if (debug) printf("red_sum z%d+=z%d (%d)\n", red, inout, n);
-	}
 	template<class TL>
 	void execOneLoop(const TL& tl, int unrollN)
 	{
@@ -327,7 +323,7 @@ struct GeneratorBase {
 					case Log: gen_log(pos, unrollN); break;
 					case Cosh: gen_cosh(pos, unrollN); break;
 					case Tanh: gen_tanh(pos, unrollN); break;
-					case RedSum: gen_red_sum(getReduceVarIdx(), pos, unrollN); break;
+					case RedSum: printf("dummy RedSum\n"); break;
 					default:
 						throw cybozu::Exception("bad func") << i << pos << v.v;
 					}
