@@ -28,7 +28,7 @@ void SgDestroy(SgCode *sg)
 	delete sg;
 }
 
-SgFuncFloat1 SgGetFuncFloat1(SgCode *sg, const char *varName, const char *src)
+static void setup(SgCode *sg, const char *varName, const char *src)
 	try
 {
 	sg::TokenList tl;
@@ -36,9 +36,19 @@ SgFuncFloat1 SgGetFuncFloat1(SgCode *sg, const char *varName, const char *src)
 	sg::Parser parser;
 	parser.parse(tl, src);
 	sg->gen.exec(tl);
-	return sg->gen.getAddrFloat1();
 } catch (std::exception& e) {
 	fprintf(stderr, "SgGetFuncFloat1 %s\n", e.what());
-	return 0;
 }
 
+
+SgFuncFloat1 SgGetFuncFloat1(SgCode *sg, const char *varName, const char *src)
+{
+	setup(sg, varName, src);
+	return sg->gen.getAddrFloat1();
+}
+
+SgFuncFloat1Reduce SgGetFuncFloat1Reduce(SgCode *sg, const char *varName, const char *src)
+{
+	setup(sg, varName, src);
+	return sg->gen.getAddrFloat1Reduce();
+}

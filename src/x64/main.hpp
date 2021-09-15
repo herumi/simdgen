@@ -24,7 +24,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	static const size_t dataSize = 4096;
 	static const size_t codeSize = 8192;
 	static const size_t totalSize = dataSize + codeSize;
-	SgFuncFloat1 addr_;
+	void* addr_;
 	Label dataL_;
 	Reg64 dataReg_;
 
@@ -40,7 +40,8 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	{
 		setProtectModeRW();
 	}
-	SgFuncFloat1 getAddrFloat1() const { return addr_; }
+	SgFuncFloat1 getAddrFloat1() const { return (SgFuncFloat1)addr_; }
+	SgFuncFloat1Reduce getAddrFloat1Reduce() const { return (SgFuncFloat1Reduce)addr_; }
 
 	void gen_reduce(int dst, int src1, int src2)
 	{
@@ -101,7 +102,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			dd(constIdx_.getVal(i));
 		}
 		setSize(dataSize);
-		addr_ = getCurr<SgFuncFloat1>();
+		addr_ = getCurr<void*>();
 		{
 			int keepN = 0;
 			if (totalN_ > maxFreeN) keepN = totalN_ - maxFreeN;
@@ -111,9 +112,14 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 				vmovups(ptr[rsp + i * simdByte_], Zmm(maxFreeN + i));
 			}
 			Reg64 dst, src, n;
-			dst = sf.p[0];
-			src = sf.p[1];
-			n = sf.p[2];
+			if (reduceFuncType_ >= 0) {
+				src = sf.p[0];
+				n = sf.p[1];
+			} else {
+				dst = sf.p[0];
+				src = sf.p[1];
+				n = sf.p[2];
+			}
 			dataReg_ = sf.t[0];
 			mov(dataReg_, (size_t)dataL.getAddress());
 			gen_setConst();
@@ -136,7 +142,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 				outputOne(dst, i);
 			}
 			add(src, 64 * unrollN_);
-			add(dst, 64 * unrollN_);
+			if (reduceFuncType_ < 0) add(dst, 64 * unrollN_);
 			sub(n, 16 * unrollN_);
 		L(cmp1L);
 			cmp(n, 16  * unrollN_);
@@ -150,7 +156,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 				execOneLoop(tl, 1);
 				outputOne(dst, 0);
 				add(src, 64);
-				add(dst, 64);
+				if (reduceFuncType_ < 0) add(dst, 64);
 				sub(n, 16);
 			L(cmp2L);
 				cmp(n, 16);
