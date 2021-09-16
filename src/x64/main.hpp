@@ -54,6 +54,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	// x[0] = sum(x[0:...15]) using s
 	void reduceOne_sum(int d, int s)
 	{
+		assert(d != s);
 		vextractf64x4(Ymm(d), Zmm(s), 1);
 		vaddps(Ymm(d), Ymm(s), Ymm(d));
 		vextractf128(Xmm(s), Ymm(d), 1);
@@ -132,7 +133,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			Label cmp1L, cmp2L, exitL;
 			jmp(cmp1L, T_NEAR);
 			puts("execOneLoop lp");
-		Label lp1 = L();
+		Label lp1 = L(); // while (n >= 16 * unrollN_)
 			for (int i = 0; i < unrollN_; i++) {
 				vmovups(Zmm(getVarIdx(i)), ptr[src + i * simdByte_]);
 			}
@@ -147,9 +148,9 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			cmp(n, 16  * unrollN_);
 			jge(lp1, T_NEAR);
 			puts("execOneLoop remain");
-			jmp(cmp2L, T_NEAR);
 
-			if (unrollN_ > 2) {
+			if (unrollN_ > 1) {
+				jmp(cmp2L, T_NEAR);
 			Label lp2 = L();
 				vmovups(Zmm(getVarIdx(0)), ptr[src]);
 				execOneLoop(tl, 1);
