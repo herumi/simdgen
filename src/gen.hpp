@@ -69,6 +69,7 @@ struct GeneratorBase {
 	FuncInfo funcInfoTbl[FuncTypeN];
 	int simdByte_;
 	int unrollN_;
+	void* addr_;
 	/*
 		0, ..., varN_ ; var
 		varN_, ..., varN_ + constN_ ; const
@@ -88,6 +89,7 @@ struct GeneratorBase {
 	GeneratorBase()
 		: simdByte_(32 / 8) // one float
 		, unrollN_(1)
+		, addr_(0)
 		, varN_(0)
 		, constN_(0)
 		, maxTmpN_(0)
@@ -103,6 +105,8 @@ struct GeneratorBase {
 	virtual ~GeneratorBase()
 	{
 	}
+	SgFuncFloat1 getAddrFloat1() const { return (SgFuncFloat1)addr_; }
+	SgFuncFloat1Reduce getAddrFloat1Reduce() const { return (SgFuncFloat1Reduce)addr_; }
 	int getVarIdxOffset() const { return 0; }
 	int getVarIdx(int i) const { return getVarIdxOffset() + i; }
 	int getReduceVarIdx() const { return getVarIdxOffset() + varN_ - unrollN_; }
@@ -239,6 +243,30 @@ struct GeneratorBase {
 	virtual void gen_tanh(int inout, int n)
 	{
 		if (debug) printf("tanh z%d (%d)\n", inout, n);
+	}
+	virtual void reduceOne_sum(int d, int s)
+	{
+		if (debug) printf("reduceOne_sum z%d (%d)\n", d, s);
+	}
+	void gen_reduce(int red, int src) // not virtual
+	{
+		switch (reduceFuncType_) {
+		case RedSum: gen_add(red, red, src); break;
+		default:
+			throw cybozu::Exception("gen_reduce:bad reduceFuncType_") << reduceFuncType_;
+		}
+	}
+	void reduceAll() // not virtual
+	{
+		int red = getReduceVarIdx();
+		for (int i = 1; i < unrollN_; i++) {
+			gen_reduce(red, red + i);
+		}
+		switch (reduceFuncType_) {
+		case RedSum: reduceOne_sum(0, red); break;
+		default:
+			throw cybozu::Exception("reduce:bad reduceFuncType_") << reduceFuncType_;
+		}
 	}
 	template<class TL>
 	void execOneLoop(const TL& tl, int unrollN)

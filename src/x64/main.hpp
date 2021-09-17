@@ -24,13 +24,11 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	static const size_t dataSize = 4096;
 	static const size_t codeSize = 8192;
 	static const size_t totalSize = dataSize + codeSize;
-	void* addr_;
 	Label dataL_;
 	Reg64 dataReg_;
 
 	Generator()
 		: CodeGenerator(totalSize, DontSetProtectRWE)
-		, addr_(0)
 		, dataReg_(rax)
 	{
 		simdByte_ = 512 / 8;
@@ -39,17 +37,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	~Generator()
 	{
 		setProtectModeRW();
-	}
-	SgFuncFloat1 getAddrFloat1() const { return (SgFuncFloat1)addr_; }
-	SgFuncFloat1Reduce getAddrFloat1Reduce() const { return (SgFuncFloat1Reduce)addr_; }
-
-	void gen_reduce(int red, int src)
-	{
-		switch (reduceFuncType_) {
-		case RedSum: gen_add(red, red, src); break;
-		default:
-			throw cybozu::Exception("gen_reduce:bad reduceFuncType_") << reduceFuncType_;
-		}
 	}
 	// x[0] = sum(x[0:...15]) using s
 	void reduceOne_sum(int d, int s)
@@ -64,18 +51,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		vmovaps(Xmm(d), Xmm(s));
 		vshufps(Xmm(s), Xmm(s), Xmm(s), 0x55);
 		vaddss(Xmm(d), Xmm(d), Xmm(s));
-	}
-	void reduceAll()
-	{
-		int red = getReduceVarIdx();
-		for (int i = 1; i < unrollN_; i++) {
-			gen_reduce(red, red + i);
-		}
-		switch (reduceFuncType_) {
-		case RedSum: reduceOne_sum(0, red); break;
-		default:
-			throw cybozu::Exception("reduce:bad reduceFuncType_") << reduceFuncType_;
-		}
 	}
 	void outputOne(const Reg64& dst, int i, const Opmask& k = util::k0)
 	{
