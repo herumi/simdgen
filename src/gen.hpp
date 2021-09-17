@@ -292,8 +292,8 @@ struct GeneratorBase {
 					default:
 						throw cybozu::Exception("bad op") << i << v.v;
 					}
-					stackPos -= unrollN;
 				}
+				stackPos -= unrollN;
 				break;
 			case Func:
 				{
