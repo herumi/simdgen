@@ -21,6 +21,15 @@ mklib ; make a static library
 mk -s test/parser_test.cpp
 ```
 
+For aarch64 on x64 Linux
+```
+cd xbyak_aarch64
+make CXX=aarch64-linux-gnu-g++ -j4
+cd simdgen
+make XBYAK_AARCH64=1 test PRE=aarch64-linux-gnu- ARCH=aarch64 -j
+env QEMU_LD_PREFIX=/usr/aarch64-linux-gnu qemu-aarch64 -cpu max,sve512=on bin/accuracy_test.exe
+```
+
 ## How to use
 
 ```
