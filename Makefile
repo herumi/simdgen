@@ -64,6 +64,9 @@ ifeq ($(ARCH),s390x)
   CPU=systemz
   BIT=64
 endif
+ifeq ($(QEMU),1)
+  QEMU_ENV=QEMU_LD_PREFIX=/usr/aarch64-linux-gnu qemu-aarch64 -cpu max,sve512=on
+endif
 
 CP=cp -f
 AR=ar r
@@ -136,10 +139,11 @@ sample: $(SAMPLE_EXE) $(SG_LIB)
 
 TEST_EXE=$(addprefix $(EXE_DIR)/,$(TEST_SRC:.cpp=.exe))
 test_ci: $(TEST_EXE)
-	@sh -ec 'for i in $(TEST_EXE); do echo $$i; env LSAN_OPTIONS=verbosity=0:log_threads=1 $$i; done'
+#	@sh -ec 'for i in $(TEST_EXE); do echo $$i; env LSAN_OPTIONS=verbosity=0:log_threads=1 $$i; done'
+	@sh -ec 'for i in $(TEST_EXE); do echo $$i; env $(QEMU_ENV) $$i; done'
 test: $(TEST_EXE)
 	@echo test $(TEST_EXE)
-	@sh -ec 'for i in $(TEST_EXE); do $$i|grep "ctest:name"; done' > result.txt
+	@sh -ec 'for i in $(TEST_EXE); do env $(QEMU_ENV) $$i|grep "ctest:name"; done' > result.txt
 	@grep -v "ng=0, exception=0" result.txt; if [ $$? -eq 1 ]; then echo "all unit tests succeed"; else exit 1; fi
 
 test_unroll: $(TEST_EXE)
