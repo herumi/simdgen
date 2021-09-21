@@ -54,7 +54,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			dd(constIdx_.getVal(i));
 		}
 		setSize(dataSize);
-		addr_ = getCurr<SgFuncFloat1>();
+		addr_ = getCurr<void*>();
 
 		adr(dataReg_, dataL);
 		ptrue(p0.s);
@@ -67,10 +67,19 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			sub(sp, sp, 16);
 			str(PReg(i).s, ptr(sp));
 		}
-		const XReg& dst = x0;
-		const XReg& src = x1;
-		const XReg& n = x2;
+		XReg dst = x0, src = x1, n = x2;
+		if (reduceFuncType_ >= 0) {
+			// dst is not used
+			src = x0;
+			n = x1;
+		}
 		gen_setConst();
+		if (reduceFuncType_ >= 0) {
+			for (int i = 0; i < unrollN_; i++) {
+				ZRegS red(getReduceVarIdx() + i);
+				fcpy(red, p0, 0);
+			}
+		}
 
 		Label skip;
 		b(skip);

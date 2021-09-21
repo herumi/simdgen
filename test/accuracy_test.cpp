@@ -132,6 +132,7 @@ CYBOZU_TEST_AUTO(loop)
 	SgDestroy(sg);
 }
 
+#if 1
 CYBOZU_TEST_AUTO(exp)
 {
 	SgCode *sg = SgCreate();
@@ -226,4 +227,4 @@ CYBOZU_TEST_AUTO(red_sum)
 	}
 	SgDestroy(sg);
 }
-
+#endif
