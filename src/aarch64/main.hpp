@@ -77,7 +77,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		if (reduceFuncType_ >= 0) {
 			for (int i = 0; i < unrollN_; i++) {
 				ZRegS red(getReduceVarIdx() + i);
-				fcpy(red, p0, 0);
+				eor(red, p0, red);
 			}
 		}
 
