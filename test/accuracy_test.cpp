@@ -118,16 +118,16 @@ CYBOZU_TEST_AUTO(loop)
 	for (size_t i = 0; i < N; i++) {
 		src[i] = float(i + 1);
 	}
-	dst[N] = 9999;
+	const float keep = 9999;
+	dst[N] = keep;
 	const float eps = 1e-5;
 	for (size_t n = 0; n <= N; n++) {
 		const float *p = src + N - n;
-		float keep = dst[n];
-		addr(dst, p, n);
+		addr(dst + N - n, p, n);
 		for (size_t i = 0; i < n; i++) {
-			CYBOZU_TEST_NEAR(dst[i], p[i] + 100, eps);
+			CYBOZU_TEST_NEAR(dst[N - n + i], p[i] + 100, eps);
 		}
-		CYBOZU_TEST_NEAR(dst[n], keep, eps);
+		CYBOZU_TEST_NEAR(dst[N], keep, eps);
 	}
 	SgDestroy(sg);
 }
