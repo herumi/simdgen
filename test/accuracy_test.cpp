@@ -105,7 +105,6 @@ void checkTable(float (*f)(float), SgFuncFloat1 g, const float (&tbl)[N])
 	}
 }
 
-#if 1
 CYBOZU_TEST_AUTO(loop)
 {
 	SgCode *sg = SgCreate();
@@ -133,9 +132,7 @@ CYBOZU_TEST_AUTO(loop)
 	}
 	SgDestroy(sg);
 }
-#endif
 
-#if 1
 CYBOZU_TEST_AUTO(exp)
 {
 	SgCode *sg = SgCreate();
@@ -209,9 +206,7 @@ CYBOZU_TEST_AUTO(cosh)
 	bench("cosh", coshf, addr);
 	SgDestroy(sg);
 }
-#endif
 
-#if 1
 CYBOZU_TEST_AUTO(red_sum)
 {
 	SgCode *sg = SgCreate();
@@ -233,4 +228,3 @@ CYBOZU_TEST_AUTO(red_sum)
 	}
 	SgDestroy(sg);
 }
-#endif
