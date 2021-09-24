@@ -80,11 +80,13 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		ptrue(p0.s);
 		// store regs
 		if (debug) printf("saveRegBegin=%d saveRegEnd=%d totalN_=%d\n", saveRegBegin, saveRegEnd, totalN_);
-		for (int i = saveRegBegin; i < std::min(saveRegEnd, totalN_); i++) {
+		const int saveN = std::min(saveRegEnd, totalN_);
+		for (int i = saveRegBegin; i < saveN; i++) {
 			sub(sp, sp, 64);
 			st1w(ZReg(i).s, p0, ptr(sp));
 		}
-		for (int i = savePredBegin; i < funcTmpMask_.getMax(); i++) {
+		const int saveMaskN = funcTmpMask_.getMax();
+		for (int i = savePredBegin; i < saveMaskN; i++) {
 			sub(sp, sp, 16);
 			str(PReg(i).s, ptr(sp));
 		}
@@ -140,12 +142,12 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		}
 
 		// restore regs
-		for (int i = savePredBegin; i < funcTmpMask_.getMax(); i++) {
-			ldr(PReg(i).s, ptr(sp));
+		for (int i = savePredBegin; i < saveMaskN; i++) {
+			ldr(PReg(saveMaskN + savePredBegin - 1 - i).s, ptr(sp));
 			add(sp, sp, 16);
 		}
-		for (int i = saveRegBegin; i < std::min(saveRegEnd, totalN_); i++) {
-			ld1w(ZReg(i).s, p0, ptr(sp));
+		for (int i = saveRegBegin; i < saveN; i++) {
+			ld1w(ZReg(saveN + saveRegBegin - 1 - i).s, p0, ptr(sp));
 			add(sp, sp, 64);
 		}
 		ret();
