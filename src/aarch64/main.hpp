@@ -45,6 +45,26 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		simdByte_ = 512 / 8;
 		setFuncInfoTbl();
 	}
+	// x[0] = sum(s[0:...15])
+	void reduceOne_sum(int d, int s)
+	{
+		assert(d != s);
+		faddv(SReg(d), p0, ZRegS(s));
+	}
+	void outputOne(const XReg& dst, int i, const XReg *tmpX = 0)
+	{
+		if (reduceFuncType_ >= 0) {
+			int red = getReduceVarIdx() + i;
+			int src = getTmpIdx(i);
+			gen_reduce(red, src);
+		} else {
+			if (tmpX) {
+				st1w(ZReg(getTmpIdx(0)).s, p1, ptr(dst, tmpX_, LSL, 2));
+			} else {
+				st1w(ZReg(getTmpIdx(i)).s, p0, ptr(dst, i));
+			}
+		}
+	}
 	void exec(const sg::TokenList& tl)
 	{
 		if (debug) puts("aarch64/exec");
@@ -59,6 +79,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		adr(dataReg_, dataL);
 		ptrue(p0.s);
 		// store regs
+		if (debug) printf("saveRegBegin=%d saveRegEnd=%d totalN_=%d\n", saveRegBegin, saveRegEnd, totalN_);
 		for (int i = saveRegBegin; i < std::min(saveRegEnd, totalN_); i++) {
 			sub(sp, sp, 64);
 			st1w(ZReg(i).s, p0, ptr(sp));
@@ -81,8 +102,8 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			}
 		}
 
-		Label skip;
-		b(skip);
+		Label skipL, exitL;
+		b(skipL);
 	Label lp = L();
 		for (int i = 0; i < unrollN_; i++) {
 			ld1w(ZReg(getVarIdx(i)).s, p0, ptr(src, i));
@@ -90,13 +111,16 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		add(src, src, 64 * unrollN_);
 		execOneLoop(tl, unrollN_);
 		for (int i = 0; i < unrollN_; i++) {
-			st1w(ZReg(getTmpIdx(i)).s, p0, ptr(dst, i));
+			outputOne(dst, i);
 		}
 		add(dst, dst, 64 * unrollN_);
 		sub(n, n, 16 * unrollN_);
-	L(skip);
+	L(skipL);
 		cmp(n, 16 * unrollN_);
 		bge(lp);
+
+		cmp(n, 0);
+		beq(exitL);
 
 		Label cond;
 		mov(tmpX_, 0);
@@ -104,11 +128,16 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	Label lp2 = L();
 		ld1w(ZReg(getVarIdx(0)).s, p1, ptr(src, tmpX_, LSL, 2));
 		execOneLoop(tl, 1);
-		st1w(ZReg(getTmpIdx(0)).s, p1, ptr(dst, tmpX_, LSL, 2));
+		outputOne(dst, 0, &tmpX_);
 		incd(tmpX_);
 	L(cond);
 		whilelt(p1.s, tmpX_, n);
 		b_first(lp2);
+	L(exitL);
+
+		if (reduceFuncType_ >= 0) {
+			reduceAll();
+		}
 
 		// restore regs
 		for (int i = savePredBegin; i < funcTmpMask_.getMax(); i++) {
