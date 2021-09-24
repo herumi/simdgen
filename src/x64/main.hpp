@@ -38,7 +38,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	{
 		setProtectModeRW();
 	}
-	// x[0] = sum(x[0:...15]) using s
+	// x[0] = sum(s[0:...15])
 	void reduceOne_sum(int d, int s)
 	{
 		assert(d != s);
