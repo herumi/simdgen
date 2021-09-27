@@ -100,7 +100,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		if (reduceFuncType_ >= 0) {
 			for (int i = 0; i < unrollN_; i++) {
 				ZRegS red(getReduceVarIdx() + i);
-				eor(red, p0, red);
+				mov(red, 0);
 			}
 		}
 
@@ -115,7 +115,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		for (int i = 0; i < unrollN_; i++) {
 			outputOne(dst, i);
 		}
-		add(dst, dst, 64 * unrollN_);
+		if (reduceFuncType_ < 0) add(dst, dst, 64 * unrollN_);
 		sub(n, n, 16 * unrollN_);
 	L(skipL);
 		cmp(n, 16 * unrollN_);
@@ -131,7 +131,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		ld1w(ZReg(getVarIdx(0)).s, p1, ptr(src, tmpX_, LSL, 2));
 		execOneLoop(tl, 1);
 		outputOne(dst, 0, &tmpX_);
-		incd(tmpX_);
+		incw(tmpX_);
 	L(cond);
 		whilelt(p1.s, tmpX_, n);
 		b_first(lp2);
