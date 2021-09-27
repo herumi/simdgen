@@ -215,13 +215,12 @@ CYBOZU_TEST_AUTO(red_sum)
 		CYBOZU_TEST_ASSERT(false);
 		return;
 	}
-	const size_t N = 40;
+	const size_t N = 100;
 	float tbl[N];
 	for (size_t i = 0; i < N; i++) {
 		tbl[i] = i + 1;
 	}
 	for (size_t n = 0; n <= N; n++) {
-//printf("n=%zd\n", n);
 		float r = addr(tbl, n);
 		float ok = n * (n + 1) / 2;
 		CYBOZU_TEST_EQUAL(r, ok);
