@@ -40,7 +40,7 @@ int main(int arg, char *argv[])
 {
 	const char *src = argc == 1 ? "x+3" : argv[1];
 	SgCode *sg = SgCreate();
-	SgFuncFloat1* addr = SgGetFuncFloat1(sg, "x", src);
+	SgFuncFloat1 addr = SgGetFuncFloat1(sg, "x", src);
 	const size_t N = 40;
 	float x[N], y[N];
 	for (size_t i = 0; i < N; i++) {
@@ -80,18 +80,42 @@ gcc t.c -I ./src -L ./lib -lsimdgen
 ### `void SgDestroy(SgCreate *sg)`
 - destroy an instance of `sg`.
 
-### `SgFuncFloat1* SgGetFuncFloat1(Sgcode *sg, const char *varName, const char *src)`
+### `SgFuncFloat1 SgGetFuncFloat1(Sgcode *sg, const char *varName, const char *src)`
 - `sg` generates a code accoring to `varName` and src`.
 - `varName` is a variable name such as `x`.
-- `src` is a single function of `varName` such as `log(exp(x)+1`.
+- `src` is a single function of `varName` such as `log(exp(x)+1)`.
+
+### `SgFuncFloat1Reduce SgGetFuncFloat1Reduce(Sgcode *sg, const char *varName, const char *src)`
+- `sg` generates a code accoring to `varName` and src`.
+- `varName` is a variable name such as `x`.
+- `src` is a single function of `varName` such as `red_sum(log(cosh(x)))`.
 
 ## Support functions
 
 - arithmetic operations (`+`, `-`, `\*`, `/`)
-- inv
-- exp
-- log
-- cosh
+- inv(x)
+- exp(x)
+- log(x)
+- cosh(x)
+- red_sum(x) ; sum all values and return the value
+  - This function can be set on the last function.
+  - Use `SgGetFuncFloat1Reduce` instead of `SgGetFuncFloat1`.
+
+## Optional envrionment variables
+
+`SG\_OPT` can controll this library.
+
+- `debug=1` ; display some debug information
+- `unroll=<num>` ; unroll the main loop (num=1, 2, 3...,). It will cause an error if all registers are used.
+- `dump=<file name>` ; save the generated code into the file.
+  - `objdump -M intel -CSlw -D -b binary -m i386 <file name>` shows a disassembled code.
+  - Use `objdump -m aarch64 -D -b binary` for Aarch64.
+
+### Examples
+
+```
+env SG_OPT="debug=1 unroll=2 dump=code" bin/accuracy_test.exe
+```
 
 ## License
 
