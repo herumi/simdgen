@@ -74,7 +74,16 @@ inline int getFuncKind(const std::string& str)
 
 template<class T>
 struct Index {
-	std::vector<T> tbl;
+	mutable std::vector<T> tbl;
+	bool seekMode_;
+	Index()
+		: seekMode_(false)
+	{
+	}
+	void setSeekMode(bool seekMode)
+	{
+		seekMode_ = seekMode;
+	}
 	/*
 		return index of s
 		return -1 if not found
@@ -83,6 +92,10 @@ struct Index {
 	{
 		for (int i = 0; i < (int)tbl.size(); i++) {
 			if (tbl[i] == s) return i;
+		}
+		if (seekMode_) {
+			tbl.push_back(s);
+			return (int)tbl.size() - 1;
 		}
 		if (doThrow) throw cybozu::Exception("getIdx") << s;
 		return -1;

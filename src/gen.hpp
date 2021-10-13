@@ -26,10 +26,14 @@ struct IndexRange {
 	int offset_;
 	int max_;
 	int cur_;
+	int curMax_;
+	bool seekMode_;
 	IndexRange()
 		: offset_(0)
 		, max_(0)
 		, cur_(0)
+		, curMax_(0)
+		, seekMode_(false)
 	{
 	}
 	void clear()
@@ -37,14 +41,23 @@ struct IndexRange {
 		offset_ = 0;
 		max_ = 0;
 		cur_ = 0;
+		curMax_ = 0;
+		seekMode_ = false;
+	}
+	void setSeekMode(bool seekMode)
+	{
+		seekMode_ = seekMode;
 	}
 	int alloc()
 	{
-		if (cur_ == max_) throw cybozu::Exception("too alloc") << max_;
-		return offset_ + cur_++;
+		if (!seekMode_ && cur_ == max_) throw cybozu::Exception("too alloc") << max_;
+		int ret = offset_ + cur_++;
+		if (cur_ > curMax_) curMax_ = cur_;
+		return ret;
 	}
 	int getCur() const { return cur_; }
 	void setCur(int cur) { cur_ = cur; }
+	int getCurMax() const { return curMax_; }
 	void setSize(int n) { max_ = n; }
 	int getSize() const { return max_; }
 	int getMax() const { return offset_ + max_; }
@@ -122,6 +135,8 @@ struct GeneratorBase {
 	uint32_t getTotalNum() const { return getTmpOffset() + maxTmpN_; }
 	void putLayout() const
 	{
+		printf("funcTmpReg_.getCurMax()=%d\n", funcTmpReg_.getCurMax());
+		printf("funcTmpMask_.getCurMax()=%d\n", funcTmpMask_.getCurMax());
 		printf("var       %d, ..., %d\n", 0, varN_);
 		printf("const     %d, ..., %d\n", varN_, varN_ + constN_);
 		printf("funcTmp   %d, ..., %d\n", funcTmpReg_.getOffset(), funcTmpReg_.getOffset() + funcTmpReg_.getSize());
