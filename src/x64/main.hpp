@@ -158,7 +158,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 				vmovups(Zmm(maxFreeN + i), ptr[rsp + i * simdByte_]);
 			}
 		}
-		puts("setProtectModeRE");
+		if (debug) putLayout();
 		setProtectModeRE();
 	}
 	void gen_setInt(int dst, uint32_t u)

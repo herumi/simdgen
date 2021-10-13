@@ -135,12 +135,14 @@ struct GeneratorBase {
 	uint32_t getTotalNum() const { return getTmpOffset() + maxTmpN_; }
 	void putLayout() const
 	{
-		printf("funcTmpReg_.getCurMax()=%d\n", funcTmpReg_.getCurMax());
-		printf("funcTmpMask_.getCurMax()=%d\n", funcTmpMask_.getCurMax());
+		puts("--- Layout ---");
 		printf("var       %d, ..., %d\n", 0, varN_);
 		printf("const     %d, ..., %d\n", varN_, varN_ + constN_);
 		printf("funcTmp   %d, ..., %d\n", funcTmpReg_.getOffset(), funcTmpReg_.getOffset() + funcTmpReg_.getSize());
 		printf("stack reg %d, ..., %d\n", getTmpOffset(), getTotalNum());
+		printf("funcTmpReg_.getCurMax()=%d\n", funcTmpReg_.getCurMax());
+		printf("funcTmpMask_.getCurMax()=%d\n", funcTmpMask_.getCurMax());
+		puts("---");
 	}
 
 	uint32_t getConstIdx(uint32_t u) const
