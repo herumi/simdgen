@@ -99,7 +99,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			mov(dataReg_, (size_t)dataL.getAddress());
 			gen_setConst();
 			if (reduceFuncType_ >= 0) {
-				for (int i = 0; i < unrollN_; i++) {
+				LP_(i, unrollN_) {
 					Zmm red(getReduceVarIdx() + i);
 					vxorps(red, red);
 				}
@@ -109,13 +109,9 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			jmp(cmp1L, T_NEAR);
 			puts("execOneLoop lp");
 		Label lp1 = L(); // while (n >= 16 * unrollN_)
-			for (int i = 0; i < unrollN_; i++) {
-				vmovups(Zmm(getVarIdx(i)), ptr[src + i * simdByte_]);
-			}
+			LP_(i, unrollN_) vmovups(Zmm(getVarIdx(i)), ptr[src + i * simdByte_]);
 			execOneLoop(tl, unrollN_);
-			for (int i = 0; i < unrollN_; i++) {
-				outputOne(dst, i);
-			}
+			LP_(i, unrollN_) outputOne(dst, i);
 			add(src, 64 * unrollN_);
 			if (reduceFuncType_ < 0) add(dst, 64 * unrollN_);
 			sub(n, 16 * unrollN_);
@@ -202,13 +198,13 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		const Zmm two(getFloatIdx(2.0));
 		IndexRangeManager ftr(funcTmpReg_);
 		ZmmVec t0, t1;
-		for (int i = 0; i < n; i++) {
+		LP_(i, n) {
 			t0.push_back(Zmm(inout + i));
 			t1.push_back(Zmm(ftr.allocIdx()));
 		}
-		for (int i = 0; i < n; i++) vrcp14ps(t1[i], t0[i]);
-		for (int i = 0; i < n; i++) vfnmadd213ps(t0[i], t1[i], two);
-		for (int i = 0; i < n; i++) vmulps(t0[i], t0[i], t1[i]);
+		LP_(i, n) vrcp14ps(t1[i], t0[i]);
+		LP_(i, n) vfnmadd213ps(t0[i], t1[i], two);
+		LP_(i, n) vmulps(t0[i], t0[i], t1[i]);
 	}
 	void gen_exp(int inout, int n)
 	{
@@ -224,23 +220,23 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		};
 		IndexRangeManager ftr(funcTmpReg_);
 		ZmmVec t0, t1, t2;
-		for (int i = 0; i < n; i++) {
+		LP_(i, n) {
 			t0.push_back(Zmm(inout + i));
 			t1.push_back(Zmm(ftr.allocIdx()));
 			t2.push_back(Zmm(ftr.allocIdx()));
 		}
 
-		for (int i = 0; i < n; i++) vmulps(t0[i], log2_e);
-		for (int i = 0; i < n; i++) vrndscaleps(t1[i], t0[i], 0); // n = round(x)
-		for (int i = 0; i < n; i++) vsubps(t0[i], t1[i]); // a
-		for (int i = 0; i < n; i++) vmulps(t0[i], log2);
-		for (int i = 0; i < n; i++) vmovaps(t2[i], tbl[4]);
-		for (int i = 0; i < n; i++) vfmadd213ps(t2[i], t0[i], tbl[3]);
-		for (int i = 0; i < n; i++) vfmadd213ps(t2[i], t0[i], tbl[2]);
-		for (int i = 0; i < n; i++) vfmadd213ps(t2[i], t0[i], tbl[1]);
-		for (int i = 0; i < n; i++) vfmadd213ps(t2[i], t0[i], tbl[0]);
-		for (int i = 0; i < n; i++) vfmadd213ps(t2[i], t0[i], tbl[0]);
-		for (int i = 0; i < n; i++) vscalefps(t0[i], t2[i], t1[i]); // t2 * 2^t1
+		LP_(i, n) vmulps(t0[i], log2_e);
+		LP_(i, n) vrndscaleps(t1[i], t0[i], 0); // n = round(x)
+		LP_(i, n) vsubps(t0[i], t1[i]); // a
+		LP_(i, n) vmulps(t0[i], log2);
+		LP_(i, n) vmovaps(t2[i], tbl[4]);
+		LP_(i, n) vfmadd213ps(t2[i], t0[i], tbl[3]);
+		LP_(i, n) vfmadd213ps(t2[i], t0[i], tbl[2]);
+		LP_(i, n) vfmadd213ps(t2[i], t0[i], tbl[1]);
+		LP_(i, n) vfmadd213ps(t2[i], t0[i], tbl[0]);
+		LP_(i, n) vfmadd213ps(t2[i], t0[i], tbl[0]);
+		LP_(i, n) vscalefps(t0[i], t2[i], t1[i]); // t2 * 2^t1
 	}
 	void gen_cosh(int inout, int n)
 	{
@@ -248,26 +244,22 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		const Zmm f0p5(getFloatIdx(0.5));
 		const Zmm x7fffffff(getFloatIdx(u2f(0x7fffffff)));
 		ZmmVec t0;
-		for (int i = 0; i < n; i++) {
-			t0.push_back(Zmm(inout + i));
-		}
+		LP_(i, n) t0.push_back(Zmm(inout + i));
 		/*
 			X = exp(|x|)
 			cosh(x) = (X + 1/X) * 0.5
 		*/
-		for (int i = 0; i < n; i++) {
-			vandps(t0[i], t0[i], x7fffffff);
-		}
+		LP_(i, n) vandps(t0[i], t0[i], x7fffffff);
 		gen_exp(inout, n);
 		IndexRangeManager ftr(funcTmpReg_);
 		ZmmVec t1;
-		for (int i = 0; i < n; i++) {
+		LP_(i, n) {
 			t1.push_back(Zmm(ftr.allocIdx()));
 			vmovaps(t1[i], t0[i]);
 		}
 		gen_inv(t1[0].getIdx(), n);
-		for (int i = 0; i < n; i++) vaddps(t0[i], t0[i], t1[i]);
-		for (int i = 0; i < n; i++) vmulps(t0[i], t0[i], f0p5);
+		LP_(i, n) vaddps(t0[i], t0[i], t1[i]);
+		LP_(i, n) vmulps(t0[i], t0[i], f0p5);
 	}
 	void gen_log(int inout, int n)
 	{
@@ -295,7 +287,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		IndexRangeManager ftm(funcTmpMask_);
 		ZmmVec t0, t1, t2, keep;
 		OpmaskVec mask;
-		for (int i = 0; i < n; i++) {
+		LP_(i, n) {
 			t0.push_back(Zmm(inout + i));
 			t1.push_back(Zmm(ftr.allocIdx()));
 			t2.push_back(Zmm(ftr.allocIdx()));
@@ -303,29 +295,29 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			mask.push_back(Opmask(ftm.allocIdx()));
 		}
 
-		for (int i = 0; i < n; i++) vmovaps(keep[i], t0[i]);
-		for (int i = 0; i < n; i++) vpsubd(t1[i], t0[i], i127shl23);
-		for (int i = 0; i < n; i++) vpsrad(t1[i], t1[i], 23); // e
-		for (int i = 0; i < n; i++) vcvtdq2ps(t1[i], t1[i]); // float(e)
-		for (int i = 0; i < n; i++) vpandd(t0[i], t0[i], x7fffff);
-		for (int i = 0; i < n; i++) vpord(t0[i], t0[i], i127shl23); // y
+		LP_(i, n) vmovaps(keep[i], t0[i]);
+		LP_(i, n) vpsubd(t1[i], t0[i], i127shl23);
+		LP_(i, n) vpsrad(t1[i], t1[i], 23); // e
+		LP_(i, n) vcvtdq2ps(t1[i], t1[i]); // float(e)
+		LP_(i, n) vpandd(t0[i], t0[i], x7fffff);
+		LP_(i, n) vpord(t0[i], t0[i], i127shl23); // y
 
-		for (int i = 0; i < n; i++) vfmsub213ps(t0[i], f2div3, tbl[0]); // a
-		for (int i = 0; i < n; i++) vfmadd213ps(t1[i], log2, log1p5); // e
+		LP_(i, n) vfmsub213ps(t0[i], f2div3, tbl[0]); // a
+		LP_(i, n) vfmadd213ps(t1[i], log2, log1p5); // e
 #if 1
-		for (int i = 0; i < n; i++) vsubps(t2[i], keep[i], one);
-		for (int i = 0; i < n; i++) vandps(t2[i], t2[i], x7fffffff);
-		for (int i = 0; i < n; i++) vcmpltps(mask[i], t2[i], f1div8);
-		for (int i = 0; i < n; i++) vsubps(t0[i]|mask[i], keep[i], one);
-		for (int i = 0; i < n; i++) vxorps(t1[i]|mask[i], t1[i]);
+		LP_(i, n) vsubps(t2[i], keep[i], one);
+		LP_(i, n) vandps(t2[i], t2[i], x7fffffff);
+		LP_(i, n) vcmpltps(mask[i], t2[i], f1div8);
+		LP_(i, n) vsubps(t0[i]|mask[i], keep[i], one);
+		LP_(i, n) vxorps(t1[i]|mask[i], t1[i]);
 #endif
 
 		int logN = g_logTbl.N;
-		for (int i = 0; i < n; i++) vmovaps(t2[i], tbl[logN - 1]);
+		LP_(i, n) vmovaps(t2[i], tbl[logN - 1]);
 		for (int j = logN - 2; j >= 0; j--) {
-			for (int i = 0; i < n; i++) vfmadd213ps(t2[i], t0[i], tbl[j]);
+			LP_(i, n) vfmadd213ps(t2[i], t0[i], tbl[j]);
 		}
-		for (int i = 0; i < n; i++) vfmadd213ps(t0[i], t2[i], t1[i]);
+		LP_(i, n) vfmadd213ps(t0[i], t2[i], t1[i]);
 	}
 	void gen_tanh(int inout, int n)
 	{

@@ -7,6 +7,8 @@
 #include "const.hpp"
 #include "opt.hpp"
 
+#define LP_(i, n) for (int i = 0; i < n; i++)
+
 namespace sg {
 
 struct FuncInfo {
@@ -306,17 +308,13 @@ struct GeneratorBase {
 			const Value& v = vv[i];
 			switch (v.type) {
 			case Var:
-				for (int i = 0; i < unrollN; i++) {
-					stack[stackPos++] = getVarIdxOffset() + v.v + i;
-				}
+				LP_(i, unrollN) stack[stackPos++] = getVarIdxOffset() + v.v + i;
 				break;
 			case Const:
-				for (int i = 0; i < unrollN; i++) {
-					stack[stackPos++] = getConstIdxOffset() + constIdx_.getIdx(v.v);
-				}
+				LP_(i, unrollN) stack[stackPos++] = getConstIdxOffset() + constIdx_.getIdx(v.v);
 				break;
 			case Op:
-				for (int i = 0; i < unrollN; i++) {
+				LP_(i, unrollN) {
 					int dst = 0;
 					int src1 = stack[stackPos - unrollN * 2 + i];
 					int src2 = stack[stackPos - unrollN + i];
@@ -350,7 +348,7 @@ struct GeneratorBase {
 				{
 					int pos = stack[stackPos - unrollN];
 					if (pos < tmpMin) {
-						for (int i = 0; i < unrollN; i++) {
+						LP_(i, unrollN) {
 							gen_copy(tmpPos, pos + i);
 							stack[stackPos - unrollN + i] = tmpPos;
 							tmpPos++;
