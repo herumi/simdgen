@@ -24,24 +24,30 @@ struct FuncInfo {
 
 struct IndexRange {
 	int offset_;
-	int n_;
+	int max_;
 	int cur_;
 	IndexRange()
 		: offset_(0)
-		, n_(0)
+		, max_(0)
 		, cur_(0)
 	{
 	}
+	void clear()
+	{
+		offset_ = 0;
+		max_ = 0;
+		cur_ = 0;
+	}
 	int alloc()
 	{
-		if (cur_ == n_) throw cybozu::Exception("too alloc") << n_;
+		if (cur_ == max_) throw cybozu::Exception("too alloc") << max_;
 		return offset_ + cur_++;
 	}
 	int getCur() const { return cur_; }
 	void setCur(int cur) { cur_ = cur; }
-	void setSize(int n) { n_ = n; }
-	int getSize() const { return n_; }
-	int getMax() const { return offset_ + n_; }
+	void setSize(int n) { max_ = n; }
+	int getSize() const { return max_; }
+	int getMax() const { return offset_ + max_; }
 	void setOffset(int offset) { offset_ = offset; }
 	int getOffset() const { return offset_; }
 };
@@ -138,7 +144,7 @@ struct GeneratorBase {
 				constIdx_.append(vv[i].v);
 			}
 		}
-		funcTmpReg_.n_ = 0;
+		funcTmpReg_.clear();
 		/*
 			append const var in used functions
 			set funcTmpReg_
