@@ -109,8 +109,9 @@ struct Index {
 		}
 		return idx;
 	}
-	void put() const
+	void put(const char *msg = "") const
 	{
+		printf("%s size=%zd ", msg, tbl.size());
 		for (size_t i = 0; i < tbl.size(); i++) {
 			std::cout << i << ":" << tbl[i] << ' ';
 		}
