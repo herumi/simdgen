@@ -65,6 +65,10 @@ struct IndexRange {
 	int getMax() const { return offset_ + max_; }
 	void setOffset(int offset) { offset_ = offset; }
 	int getOffset() const { return offset_; }
+	void put(const char *msg = "") const
+	{
+		printf("%s offset=%d, max=%d, cur=%d, curMax=%d\n", msg, offset_, max_, cur_, curMax_);
+	}
 };
 
 struct IndexRangeManager {
@@ -298,8 +302,6 @@ struct GeneratorBase {
 	{
 		const sg::ValueVec& vv = tl.getValueVec();
 		const size_t n = vv.size();
-		/*
-		*/
 		int stack[32];
 		int stackPos = 0;
 		const int tmpMin = getTmpOffset();
