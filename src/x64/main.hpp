@@ -86,6 +86,8 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 
 		Label dataL = L();
 		updateConstIdx(tl);
+		funcTmpReg_.put("funcTmpReg2");
+		funcTmpMask_.put("funcTmpMask2");
 		for (uint32_t i = 0; i < constN_; i++) {
 			dd(constIdx_.getVal(i));
 		}
