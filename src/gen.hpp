@@ -188,11 +188,11 @@ struct GeneratorBase {
 		funcTmpReg_.setSize(regN * unrollN_);
 		funcTmpMask_.setSize(maskN * unrollN_);
 
-		varN_ = tl.getVarNum() * unrollN_;
+		varN_ = uint32_t(tl.getVarNum()) * unrollN_;
 		if (reduceFuncType_) {
 			varN_ += unrollN_;
 		}
-		constN_ = constIdx_.size();
+		constN_ = uint32_t(constIdx_.size());
 		funcTmpReg_.setOffset(varN_ + constN_);
 		funcTmpMask_.setOffset(1 + 1); // mask0 and mask1 are reserved
 		maxTmpN_ = tl.getMaxTmpNum() * unrollN_;
@@ -304,8 +304,8 @@ struct GeneratorBase {
 		int stackPos = 0;
 		const int tmpMin = getTmpOffset();
 		int tmpPos = tmpMin;
-		for (size_t i = 0; i < n; i++) {
-			const Value& v = vv[i];
+		for (size_t j = 0; j < n; j++) {
+			const Value& v = vv[j];
 			switch (v.type) {
 			case Var:
 				LP_(i, unrollN) stack[stackPos++] = getVarIdxOffset() + v.v + i;
@@ -339,7 +339,7 @@ struct GeneratorBase {
 					case Mul: gen_mul(dst, src1, src2); break;
 					case Div: gen_div(dst, src1, src2); break;
 					default:
-						throw cybozu::Exception("bad op") << i << v.v;
+						throw cybozu::Exception("bad op") << j << v.v;
 					}
 				}
 				stackPos -= unrollN;
@@ -363,12 +363,12 @@ struct GeneratorBase {
 					case Tanh: gen_tanh(pos, unrollN); break;
 					case RedSum: printf("dummy RedSum\n"); break;
 					default:
-						throw cybozu::Exception("bad func") << i << pos << v.v;
+						throw cybozu::Exception("bad func") << j << pos << v.v;
 					}
 				}
 				break;
 			default:
-				throw cybozu::Exception("bad type") << i << stackPos << v.type;
+				throw cybozu::Exception("bad type") << j << stackPos << v.type;
 			}
 		}
 	}

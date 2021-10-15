@@ -20,6 +20,7 @@ SgCode* SgCreate()
 {
 	return new SgCode();
 } catch (std::exception& e) {
+	fprintf(stderr, "err %s\n", e.what());
 	return 0;
 }
 

@@ -3,9 +3,13 @@
 #include <cmath>
 #include <float.h>
 #include <vector>
+#include <time.h>
+#ifdef _MSC_VER
+	#pragma warning(disable : 4305)
+#endif
 
 typedef std::vector<float> floatVec;
-float MAX_E = 1e-6;
+const float MAX_E = 1e-6f;
 
 void loop(float (*f)(float), float *dst, const float *src, size_t n)
 {
@@ -22,7 +26,7 @@ void bench(const char *msg, float (*f)(float), SgFuncFloat1 g)
 	const size_t C = 10000;
 	static float x[N], y1[N], y2[N];
 	for (size_t i = 0; i < N; i++) {
-		x[i] = 5 + sin(i / 3.141592) * 2;
+		x[i] = 5 + sin(i / 3.141592f) * 2;
 	}
 	begin = clock();
 	for (size_t i = 0; i < C; i++) {
@@ -218,11 +222,11 @@ CYBOZU_TEST_AUTO(red_sum)
 	const size_t N = 100;
 	float tbl[N];
 	for (size_t i = 0; i < N; i++) {
-		tbl[i] = i + 1;
+		tbl[i] = float(i) + 1;
 	}
 	for (size_t n = 0; n <= N; n++) {
 		float r = addr(tbl, n);
-		float ok = n * (n + 1) / 2;
+		float ok = float(n * (n + 1) / 2);
 		CYBOZU_TEST_EQUAL(r, ok);
 	}
 	SgDestroy(sg);

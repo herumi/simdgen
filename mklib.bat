@@ -1,5 +1,5 @@
 @echo off
-set CFLAGS=/MT /DNOMINMAX /Ox /DNDEBUG /openmp /W4 /Zi /EHsc /nologo -I./include -I./src -I./src/x64/
+set CFLAGS=/MT /DNOMINMAX /Ox /DNDEBUG /D_CRT_SECURE_NO_WARNINGS /openmp /W4 /Zi /EHsc /nologo -I./include -I./src -I./src/x64/
 if "%1"=="dll" (
   echo make dynamic library DLL
   set CFLAGS=%CFLAGS% /DSG_NO_AUTOLINK

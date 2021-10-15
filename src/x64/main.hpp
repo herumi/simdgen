@@ -73,7 +73,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 #endif
 		Label dataL = L();
 		updateConstIdx(tl);
-		for (size_t i = 0; i < constN_; i++) {
+		for (uint32_t i = 0; i < constN_; i++) {
 			dd(constIdx_.getVal(i));
 		}
 		setSize(dataSize);

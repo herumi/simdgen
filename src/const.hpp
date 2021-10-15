@@ -1,4 +1,8 @@
 #pragma once
+#ifdef _MSC_VER
+	#pragma warning(push)
+	#pragma warning(disable : 4305)
+#endif
 
 namespace sg {
 
@@ -94,3 +98,6 @@ extern const ExpTbl g_expTbl;
 extern const LogTbl g_logTbl;
 } // sg
 
+#ifdef _MSC_VER
+	#pragma warning(pop)
+#endif
