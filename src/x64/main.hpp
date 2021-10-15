@@ -65,12 +65,25 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	void exec(const sg::TokenList& tl)
 	{
 		if (debug) puts("x64/exec");
-#if 1
 		Cpu cpu;
 		if (!cpu.has(Xbyak::util::Cpu::tAVX512F)) {
 			throw cybozu::Exception("AVX-512 is not supported");
 		}
+		setSize(0); // reset
+#if 0
+		funcTmpReg_.setSeekMode(true);
+		funcTmpMask_.setSeekMode(true);
+		constIdx_.setSeekMode(true);
+		execOneLoop(tl, unrollN_);
+		funcTmpReg_.put("funcTmpReg");
+		funcTmpMask_.put("funcTmpMask");
+		constIdx_.put();
 #endif
+		setSize(0);
+		funcTmpReg_.clear();
+		funcTmpMask_.clear();
+		constIdx_.setSeekMode(false);
+
 		Label dataL = L();
 		updateConstIdx(tl);
 		for (uint32_t i = 0; i < constN_; i++) {
