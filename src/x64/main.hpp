@@ -32,7 +32,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		, dataReg_(rax)
 	{
 		simdByte_ = 512 / 8;
-//		setFuncInfoTbl();
 	}
 	~Generator()
 	{

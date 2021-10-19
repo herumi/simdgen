@@ -168,16 +168,6 @@ struct GeneratorBase {
 			set funcTmpReg_
 		*/
 		reduceFuncType_ = tl.getReduceFuncType();
-#if 0
-		for (int i = 0; i < sg::FuncTypeN; i++) {
-			if (!tl.isUsedFunc(i)) continue;
-			const FuncInfo& fi = funcInfoTbl[i];
-			if (fi.reduce) {
-				if (reduceFuncType_ >= 0) throw cybozu::Exception("use twice reduce func");
-				reduceFuncType_ = i;
-			}
-		}
-#endif
 
 		varN_ = uint32_t(tl.getVarNum()) * unrollN_;
 		if (reduceFuncType_) {

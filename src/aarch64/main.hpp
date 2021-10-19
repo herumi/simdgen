@@ -43,7 +43,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		, debug(false)
 	{
 		simdByte_ = 512 / 8;
-		setFuncInfoTbl();
 	}
 	// x[0] = sum(s[0:...15])
 	void reduceOne_sum(int d, int s)
