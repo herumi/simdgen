@@ -192,7 +192,6 @@ struct GeneratorBase {
 	virtual void exec(const sg::TokenList& tl)
 	{
 		if (debug) puts("init of GeneratorBase");
-		setFuncInfoTbl();
 		updateConstIdx(tl);
 		gen_setConst();
 		puts("execOneLoop");
@@ -348,72 +347,6 @@ struct GeneratorBase {
 				break;
 			default:
 				throw cybozu::Exception("bad type") << j << stackPos << v.type;
-			}
-		}
-	}
-	void setFuncInfoTbl()
-	{
-		for (size_t i = 0; i < FuncTypeN; i++) {
-			FuncInfo& fi = funcInfoTbl[i];
-			switch (i) {
-			case Inv:
-#ifdef SG_X64
-				fi.constTbl.push_back(f2u(2.0));
-				fi.tmpRegN = 1;
-#else
-				fi.tmpRegN = 2;
-#endif
-				fi.tmpMaskN = 0;
-				break;
-			case Exp:
-			case Cosh:
-				fi.constTbl.push_back(f2u(g_expTbl.log2_e));
-#ifdef SG_X64
-				fi.constTbl.push_back(f2u(g_expTbl.log2));
-				for (int j = 0; j < ExpTbl::N; j++) {
-					fi.constTbl.push_back(f2u(g_expTbl.coef[j]));
-				}
-#else
-				fi.constTbl.push_back(g_expTbl.not_mask17);
-				fi.constTbl.push_back(f2u(g_expTbl.one));
-				fi.constTbl.push_back(f2u(g_expTbl.coeff1));
-				fi.constTbl.push_back(f2u(g_expTbl.coeff2));
-#endif
-				fi.tmpRegN = ExpTbl::tmpRegN;
-				fi.tmpMaskN = ExpTbl::tmpMaskN;
-				if (i == Exp) break;
-				// cosh(x) = (e^x + e^(-x))*0.5
-				fi.constTbl.push_back(f2u(0.5));
-				// for inv
-#ifdef SG_X64
-				fi.constTbl.push_back(f2u(2.0));
-				fi.constTbl.push_back(0x7fffffff);
-#else
-				fi.tmpRegN++;
-#endif
-				break;
-			case Log:
-				fi.constTbl.push_back(g_logTbl.i127shl23);
-				fi.constTbl.push_back(g_logTbl.x7fffff);
-#ifdef SG_X64
-				fi.constTbl.push_back(g_logTbl.x7fffffff);
-				fi.constTbl.push_back(f2u(g_logTbl.one));
-				fi.constTbl.push_back(f2u(g_logTbl.f1div8));
-#endif
-				fi.constTbl.push_back(f2u(g_logTbl.log2));
-				fi.constTbl.push_back(f2u(g_logTbl.f2div3));
-				fi.constTbl.push_back(f2u(g_logTbl.log1p5));
-				for (int j = 0; j < LogTbl::N; j++) {
-					fi.constTbl.push_back(f2u(g_logTbl.coef[j]));
-				}
-				fi.tmpRegN = LogTbl::tmpRegN;
-				fi.tmpMaskN = LogTbl::tmpMaskN;
-				break;
-			case RedSum:
-				fi.reduce = true;
-				break;
-			default:
-				break;
 			}
 		}
 	}
