@@ -119,7 +119,7 @@ struct Index {
 		std::cout << std::endl;
 	}
 	const T& getVal(uint32_t idx) const { return tbl[idx]; }
-	size_t size() const { return tbl.size(); }
+	uint32_t size() const { return tbl.size(); }
 };
 
 inline float u2f(uint32_t u)
@@ -202,7 +202,7 @@ struct TokenList {
 	{
 		varIdx_.append(s);
 	}
-	size_t getVarNum() const { return varIdx_.size(); }
+	uint32_t getVarNum() const { return varIdx_.size(); }
 	const ValueVec& getValueVec() const { return vv; }
 	int getMaxTmpNum() const { return maxRegStackN_; }
 	void updateMaxRegStackNum(int x)

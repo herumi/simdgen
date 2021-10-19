@@ -155,8 +155,12 @@ struct GeneratorBase {
 	{
 		return getConstIdx(f2u(f));
 	}
-	void updateConstIdx(const sg::TokenList& tl)
+	/*
+		setup registers and const variables
+	*/
+	void setupLayout(const sg::TokenList& tl)
 	{
+		// set constIdx_ by consts used in tl
 		const sg::ValueVec& vv = tl.getValueVec();
 		for (size_t i = 0; i < vv.size(); i++) {
 			if (vv[i].type == Const) {
@@ -164,16 +168,29 @@ struct GeneratorBase {
 			}
 		}
 		/*
-			append const var in used functions
-			set funcTmpReg_
+			try execOneLoop with seekMode and
+			estimate the max num of regs and constants
+			funcTmpReg_ ; # of registers temporarily used in functions
+			funcTmpMask ; # of mask registers
 		*/
+		funcTmpReg_.setSeekMode(true);
+		funcTmpMask_.setSeekMode(true);
+		constIdx_.setSeekMode(true);
+
+		execOneLoop(tl, unrollN_);
+
+		// set ordinary mode
+		funcTmpReg_.setSeekMode(false);
+		funcTmpMask_.setSeekMode(false);
+		constIdx_.setSeekMode(false);
+
 		reduceFuncType_ = tl.getReduceFuncType();
 
-		varN_ = uint32_t(tl.getVarNum()) * unrollN_;
-		if (reduceFuncType_) {
+		varN_ = tl.getVarNum() * unrollN_;
+		if (reduceFuncType_ >= 0) {
 			varN_ += unrollN_;
 		}
-		constN_ = uint32_t(constIdx_.size());
+		constN_ = constIdx_.size();
 		funcTmpReg_.setOffset(varN_ + constN_);
 		funcTmpMask_.setOffset(1 + 1); // mask0 and mask1 are reserved
 		maxTmpN_ = tl.getMaxTmpNum() * unrollN_;
@@ -192,7 +209,7 @@ struct GeneratorBase {
 	virtual void exec(const sg::TokenList& tl)
 	{
 		if (debug) puts("init of GeneratorBase");
-		updateConstIdx(tl);
+		setupLayout(tl);
 		gen_setConst();
 		puts("execOneLoop");
 		for (uint32_t i = 0; i < varN_; i++) {

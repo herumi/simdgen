@@ -69,26 +69,14 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			throw cybozu::Exception("AVX-512 is not supported");
 		}
 		Label dataL = L();
-#if 1
-		// estimate the max num of regs and constants
-		funcTmpReg_.setSeekMode(true);
-		funcTmpMask_.setSeekMode(true);
-		constIdx_.setSeekMode(true);
-		execOneLoop(tl, unrollN_);
-		funcTmpReg_.put("funcTmpReg");
-		funcTmpMask_.put("funcTmpMask");
-		constIdx_.put();
-		funcTmpReg_.setSeekMode(false);
-		funcTmpMask_.setSeekMode(false);
-		constIdx_.setSeekMode(false);
-		setSize(0);
-#endif
 
-		updateConstIdx(tl);
-		funcTmpReg_.put("funcTmpReg2");
-		funcTmpMask_.put("funcTmpMask2");
+		setupLayout(tl);
+		setSize(0);
 		for (uint32_t i = 0; i < constN_; i++) {
 			dd(constIdx_.getVal(i));
+		}
+		if (getSize() > dataSize) {
+			throw cybozu::Exception("bad data size") << getSize();
 		}
 		setSize(dataSize);
 		addr_ = getCurr<void*>();
