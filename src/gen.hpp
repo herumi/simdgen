@@ -92,10 +92,10 @@ struct GeneratorBase {
 	int unrollN_;
 	void* addr_;
 	/*
-		0, ..., varN_ ; var
-		varN_, ..., varN_ + constN_ ; const
-		varN_ + constN_, ..., varN_ + constN_ + regN * unrollN_ ; tmp reg in func
-		varN_ + constN_ + regN * unrollN_, ..., varN_ + constN_ + regN * unrollN_ + maxTmpN_; stack tmp reg
+		[0, varN_] ; var
+		varN_ + [0, constN_] ; const
+		varN_ + constN_ + [0, funcTmpReg_.max()] ; tmp reg in func
+		varN_ + constN_ + funcTmpReg_.max() + [0, maxTmpN_] ; stack tmp reg
 	*/
 	uint32_t varN_; // # variables
 	uint32_t constN_; // # constants
@@ -163,30 +163,21 @@ struct GeneratorBase {
 				constIdx_.append(vv[i].v);
 			}
 		}
-		funcTmpReg_.clear();
 		/*
 			append const var in used functions
 			set funcTmpReg_
 		*/
-		int regN = 0;
-		int maskN = 0;
-		reduceFuncType_ = -1;
+		reduceFuncType_ = tl.getReduceFuncType();
+#if 0
 		for (int i = 0; i < sg::FuncTypeN; i++) {
 			if (!tl.isUsedFunc(i)) continue;
 			const FuncInfo& fi = funcInfoTbl[i];
-			const sg::IntVec& constTbl = fi.constTbl;
-			for (size_t j = 0; j < constTbl.size(); j++) {
-				constIdx_.append(constTbl[j]);
-			}
-			if (fi.tmpRegN > regN) regN = fi.tmpRegN;
-			if (fi.tmpMaskN > maskN) maskN = fi.tmpMaskN;
 			if (fi.reduce) {
 				if (reduceFuncType_ >= 0) throw cybozu::Exception("use twice reduce func");
 				reduceFuncType_ = i;
 			}
 		}
-		funcTmpReg_.setSize(regN * unrollN_);
-		funcTmpMask_.setSize(maskN * unrollN_);
+#endif
 
 		varN_ = uint32_t(tl.getVarNum()) * unrollN_;
 		if (reduceFuncType_) {

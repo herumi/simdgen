@@ -41,7 +41,8 @@ enum FuncType {
 	Log,
 	Cosh,
 	Tanh,
-	RedSum,
+	RedBegin,
+	RedSum = RedBegin,
 	FuncTypeN
 };
 
@@ -188,9 +189,11 @@ struct TokenList {
 	Index<std::string> varIdx_;
 	ValueVec vv;
 	int maxRegStackN_;
+	int reduceFuncType_;
 	bool usedFuncTbl_[FuncTypeN];
 	TokenList()
 		: maxRegStackN_(0)
+		, reduceFuncType_(-1)
 		, usedFuncTbl_()
 	{
 	}
@@ -209,11 +212,16 @@ struct TokenList {
 	void useFunc(int kind)
 	{
 		usedFuncTbl_[kind] = true;
+		if (kind >= RedBegin) {
+			if (reduceFuncType_ >= 0) throw cybozu::Exception("use twice reduce func") << kind;
+			reduceFuncType_ = kind;
+		}
 	}
 	bool isUsedFunc(int kind) const
 	{
 		return usedFuncTbl_[kind];
 	}
+	int getReduceFuncType() const { return reduceFuncType_; }
 	void clear()
 	{
 		maxRegStackN_ = 0;

@@ -32,7 +32,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		, dataReg_(rax)
 	{
 		simdByte_ = 512 / 8;
-		setFuncInfoTbl();
+//		setFuncInfoTbl();
 	}
 	~Generator()
 	{
@@ -69,8 +69,10 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		if (!cpu.has(Xbyak::util::Cpu::tAVX512F)) {
 			throw cybozu::Exception("AVX-512 is not supported");
 		}
+		Label dataL = L();
 		setSize(0); // reset
-#if 0
+#if 1
+		// estimate the max num of regs and constants
 		funcTmpReg_.setSeekMode(true);
 		funcTmpMask_.setSeekMode(true);
 		constIdx_.setSeekMode(true);
@@ -78,13 +80,12 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		funcTmpReg_.put("funcTmpReg");
 		funcTmpMask_.put("funcTmpMask");
 		constIdx_.put();
-#endif
 		setSize(0);
-		funcTmpReg_.clear();
-		funcTmpMask_.clear();
+		funcTmpReg_.setSeekMode(false);
+		funcTmpMask_.setSeekMode(false);
 		constIdx_.setSeekMode(false);
+#endif
 
-		Label dataL = L();
 		updateConstIdx(tl);
 		funcTmpReg_.put("funcTmpReg2");
 		funcTmpMask_.put("funcTmpMask2");
