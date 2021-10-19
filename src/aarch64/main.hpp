@@ -69,6 +69,20 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	{
 		if (debug) puts("aarch64/exec");
 		Label dataL = L();
+#if 1
+		// estimate the max num of regs and constants
+		funcTmpReg_.setSeekMode(true);
+		funcTmpMask_.setSeekMode(true);
+		constIdx_.setSeekMode(true);
+		execOneLoop(tl, unrollN_);
+		funcTmpReg_.put("funcTmpReg");
+		funcTmpMask_.put("funcTmpMask");
+		constIdx_.put();
+		funcTmpReg_.setSeekMode(false);
+		funcTmpMask_.setSeekMode(false);
+		constIdx_.setSeekMode(false);
+		setSize(0);
+#endif
 		updateConstIdx(tl);
 		for (size_t i = 0; i < constN_; i++) {
 			dd(constIdx_.getVal(i));

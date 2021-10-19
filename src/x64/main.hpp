@@ -70,7 +70,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			throw cybozu::Exception("AVX-512 is not supported");
 		}
 		Label dataL = L();
-		setSize(0); // reset
 #if 1
 		// estimate the max num of regs and constants
 		funcTmpReg_.setSeekMode(true);
@@ -80,10 +79,10 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		funcTmpReg_.put("funcTmpReg");
 		funcTmpMask_.put("funcTmpMask");
 		constIdx_.put();
-		setSize(0);
 		funcTmpReg_.setSeekMode(false);
 		funcTmpMask_.setSeekMode(false);
 		constIdx_.setSeekMode(false);
+		setSize(0);
 #endif
 
 		updateConstIdx(tl);
