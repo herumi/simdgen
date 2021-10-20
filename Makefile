@@ -112,9 +112,14 @@ ifeq ($(XBYAK),1)
   CFLAGS+=-I ext/xbyak
 endif
 
+XBYAK_AARCH64_DIR?=src/aarch64/xbyak_aarch64
 ifeq ($(XBYAK_AARCH64),1)
-  CFLAGS+=-I src/aarch64/xbyak_aarch64 -std=c++11
-  LDFLAGS+=-L src/aarch64/xbyak_aarch64/lib -lxbyak_aarch64
+  CFLAGS+=-I $(XBYAK_AARCH64_DIR) -std=c++11
+  LDFLAGS+=-L $(XBYAK_AARCH64_DIR)/lib -lxbyak_aarch64
+  XBYAK_LIB=$(XBYAK_AARCH64_DIR)/lib/libxbyak_aarch64.a
+
+$(XBYAK_LIB):
+	$(MAKE) -C $(XBYAK_AARCH64_DIR)
 endif
 
 SG_LIB=$(LIB_DIR)/libsimdgen.a
@@ -130,7 +135,7 @@ VPATH=test src sample
 $(OBJ_DIR)/%.o: %.cpp
 	$(PRE)$(CXX) $(CFLAGS) -c $< -o $@ -MMD -MP -MF $(@:.o=.d)
 
-$(EXE_DIR)/%.exe: $(OBJ_DIR)/%.o $(SG_LIB)
+$(EXE_DIR)/%.exe: $(OBJ_DIR)/%.o $(SG_LIB) $(XBYAK_LIB)
 	$(PRE)$(CXX) $< -o $@ $() $(LDFLAGS)
 
 SAMPLE_SRC=mini.cpp
