@@ -17,10 +17,20 @@ void applyC(float *dst, const float *src, size_t n)
 
 float sum_log_cosh(const float *src, size_t n)
 {
+	float sum = 0;
+	for (size_t i = 0; i < n; i++) {
+//printf("src[%zd]=%f cosh=%f log=%f\n", i, src[i], cosh(src[i]), log(cosh(src[i])));
+		sum += log(cosh(src[i]));
+	}
+	return sum;
+}
+
+double sum_log_cosh_double(const double *src, size_t n)
+{
 	double sum = 0;
 	for (size_t i = 0; i < n; i++) {
 //printf("src[%zd]=%f cosh=%f log=%f\n", i, src[i], cosh(src[i]), log(cosh(src[i])));
-		sum += log(cosh(double(src[i])));
+		sum += log(cosh(src[i]));
 	}
 	return sum;
 }
@@ -45,12 +55,15 @@ int main()
 	const size_t N = 1000;
 	const size_t C = 10000;
 	static float x[N];
-#ifndef USE_RED_SUM
+#ifdef USE_RED_SUM
+	static double xd[N];
+#else
 	static float y1[N], y2[N];
 #endif
 	for (size_t i = 0; i < N; i++) {
 #ifdef USE_RED_SUM
-		x[i] = (abs(sin(i * 0.1)) * 26) - 4; /* [-4, 22] */
+		xd[i] = (abs(sin(i * 0.1)) * 26) - 4; /* [-4, 22] */
+		x[i] = (abs(sin(i * 0.1f)) * 26) - 4; /* [-4, 22] */
 #else
 		x[i] = ((int)i - 100) / (N * 0.1);
 #endif
@@ -87,7 +100,8 @@ int main()
 	}
 #endif
 #ifdef USE_RED_SUM
-	printf("sum1=%f sum2=%f\n", sum1/C, sum2/C);
+	double sum3 = sum_log_cosh_double(xd, N);
+	printf("sum1=%f sum2=%f sum3=%f\n", sum1/C, sum2/C, sum3);
 #endif
 	SgDestroy(sg);
 }
