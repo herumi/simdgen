@@ -199,14 +199,22 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		if (debug) printf("inv z%d\n", inout);
 		const Zmm two(getFloatIdx(2.0));
 		IndexRangeManager ftr(funcTmpReg_);
-		ZmmVec t0, t1;
+		ZmmVec t0;
 		LP_(i, n) {
 			t0.push_back(Zmm(inout + i));
-			t1.push_back(Zmm(ftr.allocIdx()));
 		}
+		ZmmVec t1 = getTmpRegVec(ftr, n);
 		LP_(i, n) vrcp14ps(t1[i], t0[i]);
 		LP_(i, n) vfnmadd213ps(t0[i], t1[i], two);
 		LP_(i, n) vmulps(t0[i], t0[i], t1[i]);
+	}
+	ZmmVec getTmpRegVec(IndexRangeManager& irm, int n)
+	{
+		ZmmVec t;
+		for (int i = 0; i < n; i++) {
+			t.push_back(Zmm(irm.allocIdx()));
+		}
+		return t;
 	}
 	void gen_exp(int inout, int n)
 	{
@@ -221,12 +229,12 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			Zmm(getFloatIdx(g_expTbl.coef[4])),
 		};
 		IndexRangeManager ftr(funcTmpReg_);
-		ZmmVec t0, t1, t2;
+		ZmmVec t0;
 		LP_(i, n) {
 			t0.push_back(Zmm(inout + i));
-			t1.push_back(Zmm(ftr.allocIdx()));
-			t2.push_back(Zmm(ftr.allocIdx()));
 		}
+		ZmmVec t1 = getTmpRegVec(ftr, n);
+		ZmmVec t2 = getTmpRegVec(ftr, n);
 
 		LP_(i, n) vmulps(t0[i], log2_e);
 		LP_(i, n) vrndscaleps(t1[i], t0[i], 0); // n = round(x)
