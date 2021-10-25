@@ -17,10 +17,10 @@ void applyC(float *dst, const float *src, size_t n)
 
 float sum_log_cosh(const float *src, size_t n)
 {
-	float sum = 0;
+	double sum = 0;
 	for (size_t i = 0; i < n; i++) {
 //printf("src[%zd]=%f cosh=%f log=%f\n", i, src[i], cosh(src[i]), log(cosh(src[i])));
-		sum += log(cosh(src[i]));
+		sum += log(cosh(double(src[i])));
 	}
 	return sum;
 }
@@ -50,7 +50,7 @@ int main()
 #endif
 	for (size_t i = 0; i < N; i++) {
 #ifdef USE_RED_SUM
-		x[i] = ((int)i - N/2.0) / float(N);
+		x[i] = (abs(sin(i * 0.1)) * 26) - 4; /* [-4, 22] */
 #else
 		x[i] = ((int)i - 100) / (N * 0.1);
 #endif
