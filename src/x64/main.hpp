@@ -159,6 +159,30 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		if (debug) putLayout();
 		setProtectModeRE();
 	}
+	ZmmVec getInputRegVec(int pos, int n)
+	{
+		ZmmVec t;
+		for (int i = 0; i < n; i++) {
+			t.push_back(Zmm(pos + i));
+		}
+		return t;
+	}
+	ZmmVec getTmpRegVec(IndexRangeManager& irm, int n)
+	{
+		ZmmVec t;
+		for (int i = 0; i < n; i++) {
+			t.push_back(Zmm(irm.allocIdx()));
+		}
+		return t;
+	}
+	OpmaskVec getTmpMaskVec(IndexRangeManager& irm, int n)
+	{
+		OpmaskVec t;
+		for (int i = 0; i < n; i++) {
+			t.push_back(Opmask(irm.allocIdx()));
+		}
+		return t;
+	}
 	void gen_setInt(int dst, uint32_t u)
 	{
 		if (debug) {
@@ -204,30 +228,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		LP_(i, n) vrcp14ps(t1[i], t0[i]);
 		LP_(i, n) vfnmadd213ps(t0[i], t1[i], two);
 		LP_(i, n) vmulps(t0[i], t0[i], t1[i]);
-	}
-	ZmmVec getInputRegVec(int pos, int n)
-	{
-		ZmmVec t;
-		for (int i = 0; i < n; i++) {
-			t.push_back(Zmm(pos + i));
-		}
-		return t;
-	}
-	ZmmVec getTmpRegVec(IndexRangeManager& irm, int n)
-	{
-		ZmmVec t;
-		for (int i = 0; i < n; i++) {
-			t.push_back(Zmm(irm.allocIdx()));
-		}
-		return t;
-	}
-	OpmaskVec getTmpMaskVec(IndexRangeManager& irm, int n)
-	{
-		OpmaskVec t;
-		for (int i = 0; i < n; i++) {
-			t.push_back(Opmask(irm.allocIdx()));
-		}
-		return t;
 	}
 	void gen_exp(int inout, int n)
 	{

@@ -152,6 +152,30 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		ret();
 		ready();
 	}
+	ZRegSVec getInputRegVec(int pos, int n)
+	{
+		ZRegSVec t;
+		for (int i = 0; i < n; i++) {
+			t.push_back(ZRegS(pos + i));
+		}
+		return t;
+	}
+	ZRegSVec getTmpRegVec(IndexRangeManager& irm, int n)
+	{
+		ZRegSVec t;
+		for (int i = 0; i < n; i++) {
+			t.push_back(ZRegS(irm.allocIdx()));
+		}
+		return t;
+	}
+	PRegSVec getTmpMaskVec(IndexRangeManager& irm, int n)
+	{
+		PRegSVec t;
+		for (int i = 0; i < n; i++) {
+			t.push_back(PRegS(irm.allocIdx()));
+		}
+		return t;
+	}
 	void gen_setInt(int dst, uint32_t u)
 	{
 		if (debug) {
@@ -191,12 +215,17 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	{
 		if (debug) printf("inv z%d\n", inout);
 		IndexRangeManager ftr(funcTmpReg_);
+		const ZRegSVec t0 = getInputRegVec(inout, n);
+		const ZRegSVec t1 = getTmpRegVec(ftr, n);
+		const ZRegSVec t2 = getTmpRegVec(ftr, n);
+#if 0
 		ZRegSVec t0, t1, t2;
 		LP_(i, n) {
 			t0.push_back(ZRegS(inout + i));
 			t1.push_back(ZRegS(ftr.allocIdx()));
 			t2.push_back(ZRegS(ftr.allocIdx()));
 		}
+#endif
 		LP_(i, n) frecpe(t1[i], t0[i]);
 		LP_(i, n) frecps(t2[i], t0[i], t1[i]);
 		LP_(i, n) fmul(t1[i], t1[i], t2[i]);
