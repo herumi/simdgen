@@ -40,7 +40,7 @@ struct SgOpt {
 				if (debug) printf("dumpName=%s\n", dumpName.c_str());
 			} else
 			if (k == "logp1") {
-				logp1 = v == "0";
+				logp1 = v == "1";
 				if (debug) printf("logp1=%d\n", logp1);
 			} else
 			{

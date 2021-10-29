@@ -356,7 +356,7 @@ struct GeneratorBase {
 					case Log: gen_log(pos, unrollN); break;
 					case Cosh: gen_cosh(pos, unrollN); break;
 					case Tanh: gen_tanh(pos, unrollN); break;
-					case RedSum: printf("dummy RedSum\n"); break;
+					case RedSum: /* nothing */ break;
 					default:
 						throw cybozu::Exception("bad func") << j << pos << v.v;
 					}

@@ -112,6 +112,9 @@ ifeq ($(XBYAK),1)
   CFLAGS+=-I ext/xbyak
 endif
 
+SG_LIB=$(LIB_DIR)/libsimdgen.a
+all: $(SG_LIB)
+
 XBYAK_AARCH64_DIR?=src/aarch64/xbyak_aarch64
 ifeq ($(XBYAK_AARCH64),1)
   CFLAGS+=-I $(XBYAK_AARCH64_DIR) -std=c++11
@@ -121,9 +124,6 @@ ifeq ($(XBYAK_AARCH64),1)
 $(XBYAK_LIB):
 	$(MAKE) -C $(XBYAK_AARCH64_DIR)
 endif
-
-SG_LIB=$(LIB_DIR)/libsimdgen.a
-all: $(SG_LIB)
 
 $(SG_LIB): $(LIB_OBJ)
 	$(AR) $@ $(LIB_OBJ)
