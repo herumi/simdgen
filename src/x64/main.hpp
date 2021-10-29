@@ -221,6 +221,14 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		}
 		return t;
 	}
+	OpmaskVec getTmpMaskVec(IndexRangeManager& irm, int n)
+	{
+		OpmaskVec t;
+		for (int i = 0; i < n; i++) {
+			t.push_back(Opmask(irm.allocIdx()));
+		}
+		return t;
+	}
 	void gen_exp(int inout, int n)
 	{
 		if (debug) printf("exp z%d\n", inout);
@@ -276,7 +284,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		const Zmm x7fffff(getFloatIdx(u2f(g_logTbl.x7fffff)));
 		const Zmm x7fffffff(getFloatIdx(u2f(g_logTbl.x7fffffff)));
 		const Zmm one(getFloatIdx(1.0f));
-		const Zmm f1div8(getFloatIdx(g_logTbl.f1div8));
 		const Zmm f2div3(getFloatIdx(g_logTbl.f2div3));
 		const Zmm log2(getFloatIdx(g_logTbl.log2));
 		const Zmm log1p5(getFloatIdx(g_logTbl.log1p5));
@@ -296,9 +303,11 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		const ZmmVec t0 = getInputRegVec(inout, n);
 		const ZmmVec t1 = getTmpRegVec(ftr, n);
 		const ZmmVec t2 = getTmpRegVec(ftr, n);
-		const ZmmVec keep = getTmpRegVec(ftr, n);
-
-		LP_(i, n) vmovaps(keep[i], t0[i]);
+		ZmmVec keep;
+		if (!opt.disableLogp1) {
+			keep = getTmpRegVec(ftr, n);
+			LP_(i, n) vmovaps(keep[i], t0[i]);
+		}
 		LP_(i, n) vpsubd(t1[i], t0[i], i127shl23);
 		LP_(i, n) vpsrad(t1[i], t1[i], 23); // e
 		LP_(i, n) vcvtdq2ps(t1[i], t1[i]); // float(e)
@@ -307,19 +316,16 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 
 		LP_(i, n) vfmsub213ps(t0[i], f2div3, tbl[0]); // a
 		LP_(i, n) vfmadd213ps(t1[i], log2, log1p5); // e
-#if 1
+
 		if (!opt.disableLogp1) {
-			OpmaskVec mask;
-			LP_(i, n) {
-				mask.push_back(Opmask(ftm.allocIdx()));
-			}
+			OpmaskVec mask = getTmpMaskVec(ftm, n);
+			const Zmm f1div8(getFloatIdx(g_logTbl.f1div8));
 			LP_(i, n) vsubps(t2[i], keep[i], one);
 			LP_(i, n) vandps(t2[i], t2[i], x7fffffff);
 			LP_(i, n) vcmpltps(mask[i], t2[i], f1div8);
 			LP_(i, n) vsubps(t0[i]|mask[i], keep[i], one);
 			LP_(i, n) vxorps(t1[i]|mask[i], t1[i]);
 		}
-#endif
 
 		int logN = g_logTbl.N;
 		LP_(i, n) vmovaps(t2[i], tbl[logN - 1]);
