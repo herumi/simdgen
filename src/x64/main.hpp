@@ -199,14 +199,19 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		if (debug) printf("inv z%d\n", inout);
 		const Zmm two(getFloatIdx(2.0));
 		IndexRangeManager ftr(funcTmpReg_);
-		ZmmVec t0;
-		LP_(i, n) {
-			t0.push_back(Zmm(inout + i));
-		}
-		ZmmVec t1 = getTmpRegVec(ftr, n);
+		const ZmmVec t0 = getInputRegVec(inout, n);
+		const ZmmVec t1 = getTmpRegVec(ftr, n);
 		LP_(i, n) vrcp14ps(t1[i], t0[i]);
 		LP_(i, n) vfnmadd213ps(t0[i], t1[i], two);
 		LP_(i, n) vmulps(t0[i], t0[i], t1[i]);
+	}
+	ZmmVec getInputRegVec(int pos, int n)
+	{
+		ZmmVec t;
+		for (int i = 0; i < n; i++) {
+			t.push_back(Zmm(pos + i));
+		}
+		return t;
 	}
 	ZmmVec getTmpRegVec(IndexRangeManager& irm, int n)
 	{
@@ -229,12 +234,9 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			Zmm(getFloatIdx(g_expTbl.coef[4])),
 		};
 		IndexRangeManager ftr(funcTmpReg_);
-		ZmmVec t0;
-		LP_(i, n) {
-			t0.push_back(Zmm(inout + i));
-		}
-		ZmmVec t1 = getTmpRegVec(ftr, n);
-		ZmmVec t2 = getTmpRegVec(ftr, n);
+		const ZmmVec t0 = getInputRegVec(inout, n);
+		const ZmmVec t1 = getTmpRegVec(ftr, n);
+		const ZmmVec t2 = getTmpRegVec(ftr, n);
 
 		LP_(i, n) vmulps(t0[i], log2_e);
 		LP_(i, n) vrndscaleps(t1[i], t0[i], 0); // n = round(x)
@@ -253,8 +255,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		if (debug) printf("cosh z%d\n", inout);
 		const Zmm f0p5(getFloatIdx(0.5));
 		const Zmm x7fffffff(getFloatIdx(u2f(0x7fffffff)));
-		ZmmVec t0;
-		LP_(i, n) t0.push_back(Zmm(inout + i));
+		const ZmmVec t0 = getInputRegVec(inout, n);
 		/*
 			X = exp(|x|)
 			cosh(x) = (X + 1/X) * 0.5
@@ -262,11 +263,8 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		LP_(i, n) vandps(t0[i], t0[i], x7fffffff);
 		gen_exp(inout, n);
 		IndexRangeManager ftr(funcTmpReg_);
-		ZmmVec t1;
-		LP_(i, n) {
-			t1.push_back(Zmm(ftr.allocIdx()));
-			vmovaps(t1[i], t0[i]);
-		}
+		const ZmmVec t1 = getTmpRegVec(ftr, n);
+		LP_(i, n) vmovaps(t1[i], t0[i]);
 		gen_inv(t1[0].getIdx(), n);
 		LP_(i, n) vaddps(t0[i], t0[i], t1[i]);
 		LP_(i, n) vmulps(t0[i], t0[i], f0p5);
