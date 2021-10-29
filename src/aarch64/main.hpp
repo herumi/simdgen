@@ -218,14 +218,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		const ZRegSVec t0 = getInputRegVec(inout, n);
 		const ZRegSVec t1 = getTmpRegVec(ftr, n);
 		const ZRegSVec t2 = getTmpRegVec(ftr, n);
-#if 0
-		ZRegSVec t0, t1, t2;
-		LP_(i, n) {
-			t0.push_back(ZRegS(inout + i));
-			t1.push_back(ZRegS(ftr.allocIdx()));
-			t2.push_back(ZRegS(ftr.allocIdx()));
-		}
-#endif
+
 		LP_(i, n) frecpe(t1[i], t0[i]);
 		LP_(i, n) frecps(t2[i], t0[i], t1[i]);
 		LP_(i, n) fmul(t1[i], t1[i], t2[i]);
@@ -242,12 +235,9 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		const ZRegS coeff1(getFloatIdx(g_expTbl.coeff1));
 		const ZRegS coeff2(getFloatIdx(g_expTbl.coeff2));
 		IndexRangeManager ftr(funcTmpReg_);
-		ZRegSVec t0, t1, t2;
-		LP_(i, n) {
-			t0.push_back(ZRegS(inout + i));
-			t1.push_back(ZRegS(ftr.allocIdx()));
-			t2.push_back(ZRegS(ftr.allocIdx()));
-		}
+		const ZRegSVec t0 = getInputRegVec(inout, n);
+		const ZRegSVec t1 = getTmpRegVec(ftr, n);
+		const ZRegSVec t2 = getTmpRegVec(ftr, n);
 
 //		fmin(t0, p0, expMax.s);
 //		fmax(t0, p0, expMin.s);
@@ -274,8 +264,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	void gen_cosh(int inout, int n)
 	{
 		if (debug) printf("cosh z%d\n", inout);
-		ZRegSVec t0;
-		LP_(i, n) t0.push_back(ZRegS(inout + i));
+		const ZRegSVec t0 = getInputRegVec(inout, n);
 		/*
 			X = exp(|x|)
 			cosh(x) = (X + 1/X) * 0.5
@@ -283,11 +272,8 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		LP_(i, n) fabs(t0[i], p0, t0[i]);
 		gen_exp(inout, n);
 		IndexRangeManager ftr(funcTmpReg_);
-		ZRegSVec t1;
-		LP_(i, n) {
-			t1.push_back(ZRegS(ftr.allocIdx()));
-			mov(t1[i], p0, t0[i]);
-		}
+		const ZRegSVec t1 = getTmpRegVec(ftr, n);
+		LP_(i, n) mov(t1[i], p0, t0[i]);
 		gen_inv(t1[0].getIdx(), n);
 		LP_(i, n) fadd(t0[i], t0[i], t1[i]);
 		LP_(i, n) fmul(t0[i], p0, 0.5);
@@ -313,17 +299,16 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		};
 		IndexRangeManager ftr(funcTmpReg_);
 		IndexRangeManager ftm(funcTmpMask_);
-		ZRegSVec t0, t1, t2, t3;
-		PRegSVec mask;
-		LP_(i, n) {
-			t0.push_back(ZRegS(inout + i));
-			t1.push_back(ZRegS(ftr.allocIdx()));
-			t2.push_back(ZRegS(ftr.allocIdx()));
-			t3.push_back(ZRegS(ftr.allocIdx()));
-			mask.push_back(PRegS(ftm.allocIdx()));
+
+		const ZRegSVec t0 = getInputRegVec(inout, n);
+		const ZRegSVec t1 = getTmpRegVec(ftr, n);
+		const ZRegSVec t2 = getTmpRegVec(ftr, n);
+		ZRegSVec keep;
+		if (!opt.disableLogp1) {
+			keep = getTmpRegVec(ftr, n);
+			LP_(i, n) mov(keep[i], p0, t0[i]);
 		}
 
-		LP_(i, n) mov(t3[i], p0, t0[i]);
 		LP_(i, n) sub(t1[i], t0[i], i127shl23);
 		LP_(i, n) asr(t1[i], t1[i], 23);
 		// int -> float
@@ -335,12 +320,14 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		LP_(i, n) fnmsb(t0[i], p0, f2div3, coef[0]);
 		LP_(i, n) fmad(t1[i], p0, log2, log1p5);
 
-		LP_(i, n) fsub(t2[i], t3[i], coef[0]); // x-1
-		LP_(i, n) fcpy(t3[i], p0, 1.0/8);
-		LP_(i, n) {
-			facge(mask[i], p0, t3[i], t2[i]); // 1/8 >= abs(x-1)
-			mov(t0[i], mask[i], t2[i]);
-			eor(t1[i], mask[i], t1[i]);
+		if (!opt.disableLogp1) {
+			LP_(i, n) fsub(t2[i], keep[i], coef[0]); // x-1
+			LP_(i, n) fcpy(keep[i], p0, 1.0/8);
+
+			const PRegSVec mask = getTmpMaskVec(ftm, n);
+			LP_(i, n) facge(mask[i], p0, keep[i], t2[i]); // 1/8 >= abs(x-1)
+			LP_(i, n) mov(t0[i], mask[i], t2[i]);
+			LP_(i, n) eor(t1[i], mask[i], t1[i]);
 		}
 		const int logN = LogTbl::N;
 		// fmad(a, b, c) ; a = a * b + c
