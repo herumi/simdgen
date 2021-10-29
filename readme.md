@@ -109,6 +109,7 @@ gcc t.c -I ./src -L ./lib -lsimdgen
 - `dump=<file name>` ; save the generated code into the file.
   - `objdump -M intel -CSlw -D -b binary -m i386 <file name>` shows a disassembled code.
   - Use `objdump -m aarch64 -D -b binary` for Aarch64.
+- `logp1=0` ; disable precise computation of log(x) for x is close to 1.
 
 ### Examples
 
