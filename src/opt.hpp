@@ -6,12 +6,12 @@
 struct SgOpt {
 	int unrollN;
 	bool debug;
-	bool disableLogp1;
+	bool logp1;
 	std::string dumpName;
 	SgOpt()
 		: unrollN(1)
 		, debug(false)
-		, disableLogp1(false)
+		, logp1(true)
 		, dumpName("")
 	{
 	}
@@ -39,9 +39,9 @@ struct SgOpt {
 				dumpName = v;
 				if (debug) printf("dumpName=%s\n", dumpName.c_str());
 			} else
-			if (k == "disableLogp1") {
-				disableLogp1 = v == "1";
-				if (debug) printf("disableLogp1=%d\n", disableLogp1);
+			if (k == "logp1") {
+				logp1 = v == "0";
+				if (debug) printf("logp1=%d\n", logp1);
 			} else
 			{
 				// none

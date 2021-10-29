@@ -304,7 +304,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		const ZRegSVec t1 = getTmpRegVec(ftr, n);
 		const ZRegSVec t2 = getTmpRegVec(ftr, n);
 		ZRegSVec keep;
-		if (!opt.disableLogp1) {
+		if (opt.logp1) {
 			keep = getTmpRegVec(ftr, n);
 			LP_(i, n) mov(keep[i], p0, t0[i]);
 		}
@@ -320,7 +320,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		LP_(i, n) fnmsb(t0[i], p0, f2div3, coef[0]);
 		LP_(i, n) fmad(t1[i], p0, log2, log1p5);
 
-		if (!opt.disableLogp1) {
+		if (opt.logp1) {
 			LP_(i, n) fsub(t2[i], keep[i], coef[0]); // x-1
 			LP_(i, n) fcpy(keep[i], p0, 1.0/8);
 
