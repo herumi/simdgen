@@ -1,3 +1,7 @@
+/*
+	make bin/mini.exe CFLAGS_USER="-DUSE_RED_SUM" for red_sum test
+*/
+
 #include <simdgen/simdgen.h>
 #include <stdio.h>
 #include <math.h>
@@ -34,9 +38,6 @@ double sum_log_cosh_double(const double *src, size_t n)
 	}
 	return sum;
 }
-
-// make bin/mini.exe CFLAGS_USER="-DUSE_RED_SUM"
-//#define USE_RED_SUM
 
 int main()
 {

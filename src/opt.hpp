@@ -6,10 +6,12 @@
 struct SgOpt {
 	int unrollN;
 	bool debug;
+	bool disableLogp1;
 	std::string dumpName;
 	SgOpt()
 		: unrollN(1)
 		, debug(false)
+		, disableLogp1(false)
 		, dumpName("")
 	{
 	}
@@ -24,6 +26,7 @@ struct SgOpt {
 			if (pos == std::string::npos) continue;
 			std::string k = kv.substr(0, pos);
 			std::string v = kv.substr(pos + 1);
+printf("k=%s v=%s\n", k.c_str(), v.c_str());
 			if (k == "debug") {
 				debug = v == "1";
 				if (debug) printf("debug=%d\n", debug);
@@ -36,6 +39,10 @@ struct SgOpt {
 			if (k == "dump") {
 				dumpName = v;
 				if (debug) printf("dumpName=%s\n", dumpName.c_str());
+			} else
+			if (k == "disableLogp1") {
+				disableLogp1 = v == "1";
+				if (debug) printf("disableLogp1=%d\n", disableLogp1);
 			} else
 			{
 				// none

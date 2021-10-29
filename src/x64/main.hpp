@@ -293,15 +293,10 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		};
 		IndexRangeManager ftr(funcTmpReg_);
 		IndexRangeManager ftm(funcTmpMask_);
-		ZmmVec t0, t1, t2, keep;
-		OpmaskVec mask;
-		LP_(i, n) {
-			t0.push_back(Zmm(inout + i));
-			t1.push_back(Zmm(ftr.allocIdx()));
-			t2.push_back(Zmm(ftr.allocIdx()));
-			keep.push_back(Zmm(ftr.allocIdx()));
-			mask.push_back(Opmask(ftm.allocIdx()));
-		}
+		const ZmmVec t0 = getInputRegVec(inout, n);
+		const ZmmVec t1 = getTmpRegVec(ftr, n);
+		const ZmmVec t2 = getTmpRegVec(ftr, n);
+		const ZmmVec keep = getTmpRegVec(ftr, n);
 
 		LP_(i, n) vmovaps(keep[i], t0[i]);
 		LP_(i, n) vpsubd(t1[i], t0[i], i127shl23);
@@ -313,11 +308,17 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		LP_(i, n) vfmsub213ps(t0[i], f2div3, tbl[0]); // a
 		LP_(i, n) vfmadd213ps(t1[i], log2, log1p5); // e
 #if 1
-		LP_(i, n) vsubps(t2[i], keep[i], one);
-		LP_(i, n) vandps(t2[i], t2[i], x7fffffff);
-		LP_(i, n) vcmpltps(mask[i], t2[i], f1div8);
-		LP_(i, n) vsubps(t0[i]|mask[i], keep[i], one);
-		LP_(i, n) vxorps(t1[i]|mask[i], t1[i]);
+		if (!opt.disableLogp1) {
+			OpmaskVec mask;
+			LP_(i, n) {
+				mask.push_back(Opmask(ftm.allocIdx()));
+			}
+			LP_(i, n) vsubps(t2[i], keep[i], one);
+			LP_(i, n) vandps(t2[i], t2[i], x7fffffff);
+			LP_(i, n) vcmpltps(mask[i], t2[i], f1div8);
+			LP_(i, n) vsubps(t0[i]|mask[i], keep[i], one);
+			LP_(i, n) vxorps(t1[i]|mask[i], t1[i]);
+		}
 #endif
 
 		int logN = g_logTbl.N;
