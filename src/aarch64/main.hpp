@@ -68,7 +68,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	{
 		if (debug) puts("aarch64/exec");
 		Label dataL = L();
-		setupLayout(tl);
+		detectUnrollN(tl);
 		setSize(0);
 		for (uint32_t i = 0; i < constN_; i++) {
 			dd(constIdx_.getVal(i));

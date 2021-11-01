@@ -46,6 +46,9 @@ struct IndexRange {
 	void setSeekMode(bool seekMode)
 	{
 		seekMode_ = seekMode;
+		if (seekMode) {
+			max_ = 0;
+		}
 	}
 	int alloc()
 	{
@@ -109,7 +112,7 @@ struct GeneratorBase {
 	SgOpt opt;
 	GeneratorBase()
 		: simdByte_(32 / 8) // one float
-		, unrollN_(1)
+		, unrollN_(0)
 		, addr_(0)
 		, varN_(0)
 		, constN_(0)
@@ -158,8 +161,9 @@ struct GeneratorBase {
 	/*
 		setup registers and const variables
 	*/
-	void setupLayout(const sg::TokenList& tl)
+	bool setupLayout(const sg::TokenList& tl, int unrollN)
 	{
+		unrollN_ = unrollN;
 		// set constIdx_ by consts used in tl
 		const sg::ValueVec& vv = tl.getValueVec();
 		for (size_t i = 0; i < vv.size(); i++) {
@@ -196,9 +200,31 @@ struct GeneratorBase {
 		maxTmpN_ = tl.getMaxTmpNum() * unrollN_;
 		totalN_ = varN_ + constN_ + funcTmpReg_.getSize() + maxTmpN_;
 		if (debug) printf("varN=%d constN=%d funcTmpReg.max=%d maxTmpN=%d\n", varN_, constN_, funcTmpReg_.getSize(), maxTmpN_);
-		if (totalN_ > 32) {
-			throw cybozu::Exception("too many registers");
+		return totalN_ <= 32;
+	}
+	void detectUnrollN(const sg::TokenList& tl)
+	{
+printf("unrollN_=%d\n", unrollN_);
+		const int maxTryUnrollN = 4;
+		if (unrollN_ > 0) {
+			if (!setupLayout(tl, unrollN_)) {
+				throw cybozu::Exception("can't unrollN") << unrollN_;
+			}
+		} else {
+			int unrollN = maxTryUnrollN;
+			while (unrollN > 0) {
+printf("unrollN=%d\n", unrollN);
+				if (setupLayout(tl, unrollN)) {
+printf("!!!\n");
+					break;
+				}
+				unrollN--;
+			}
+			if (unrollN == 0) {
+				throw cybozu::Exception("too complex expression");
+			}
 		}
+		if (debug) printf("unrollN_=%d\n", unrollN_);
 	}
 	void gen_setConst()
 	{
@@ -209,7 +235,7 @@ struct GeneratorBase {
 	virtual void exec(const sg::TokenList& tl)
 	{
 		if (debug) puts("init of GeneratorBase");
-		setupLayout(tl);
+		setupLayout(tl, 1);
 		gen_setConst();
 		puts("execOneLoop");
 		for (uint32_t i = 0; i < varN_; i++) {

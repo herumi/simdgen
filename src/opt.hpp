@@ -9,7 +9,7 @@ struct SgOpt {
 	bool logp1;
 	std::string dumpName;
 	SgOpt()
-		: unrollN(1)
+		: unrollN(0)
 		, debug(false)
 		, logp1(true)
 		, dumpName("")
@@ -32,7 +32,7 @@ struct SgOpt {
 			} else
 			if (k == "unroll") {
 				unrollN = cybozu::atoi(v);
-				if (unrollN < 1) throw cybozu::Exception("bad unroll") << unrollN;
+				if (unrollN < 0) throw cybozu::Exception("bad unroll") << unrollN;
 				if (debug) printf("unrollN=%d\n", unrollN);
 			}
 			if (k == "dump") {
