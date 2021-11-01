@@ -204,7 +204,6 @@ struct GeneratorBase {
 	}
 	void detectUnrollN(const sg::TokenList& tl)
 	{
-printf("unrollN_=%d\n", unrollN_);
 		const int maxTryUnrollN = 4;
 		if (unrollN_ > 0) {
 			if (!setupLayout(tl, unrollN_)) {
@@ -213,9 +212,7 @@ printf("unrollN_=%d\n", unrollN_);
 		} else {
 			int unrollN = maxTryUnrollN;
 			while (unrollN > 0) {
-printf("unrollN=%d\n", unrollN);
 				if (setupLayout(tl, unrollN)) {
-printf("!!!\n");
 					break;
 				}
 				unrollN--;

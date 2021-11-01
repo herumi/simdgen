@@ -42,6 +42,10 @@ double sum_log_cosh_double(const double *src, size_t n)
 int main()
 {
 	SgCode *sg = SgCreate();
+	if (sg == 0) {
+		printf("init err\n");
+		return 1;
+	}
 #ifdef USE_RED_SUM
 	const char *src = "red_sum(log(cosh(x)))";
 	SgFuncFloat1Reduce addr = SgGetFuncFloat1Reduce(sg, "x", src);

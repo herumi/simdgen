@@ -45,12 +45,14 @@ static void setup(SgCode *sg, const char *varName, const char *src)
 
 SgFuncFloat1 SgGetFuncFloat1(SgCode *sg, const char *varName, const char *src)
 {
+	if (sg == 0) return 0;
 	setup(sg, varName, src);
 	return sg->gen.getAddrFloat1();
 }
 
 SgFuncFloat1Reduce SgGetFuncFloat1Reduce(SgCode *sg, const char *varName, const char *src)
 {
+	if (sg == 0) return 0;
 	setup(sg, varName, src);
 	return sg->gen.getAddrFloat1Reduce();
 }

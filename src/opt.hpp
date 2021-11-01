@@ -34,7 +34,7 @@ struct SgOpt {
 				unrollN = cybozu::atoi(v);
 				if (unrollN < 0) throw cybozu::Exception("bad unroll") << unrollN;
 				if (debug) printf("unrollN=%d\n", unrollN);
-			}
+			} else
 			if (k == "dump") {
 				dumpName = v;
 				if (debug) printf("dumpName=%s\n", dumpName.c_str());
@@ -44,7 +44,7 @@ struct SgOpt {
 				if (debug) printf("logp1=%d\n", logp1);
 			} else
 			{
-				// none
+				throw cybozu::Exception("bad option") << k << v;
 			}
 		}
 	}
