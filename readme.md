@@ -105,7 +105,8 @@ gcc t.c -I ./src -L ./lib -lsimdgen
 `SG\_OPT` can controll this library.
 
 - `debug=1` ; display some debug information
-- `unroll=<num>` ; unroll the main loop (num=1, 2, 3...,). It will cause an error if all registers are used.
+- `unroll=<num>` ; unroll the main loop (num=0, 2, 3...,). It will cause an error if all registers are used.
+  - `unroll=0` means autodetection of unroll (search max unroll <= 4)
 - `dump=<file name>` ; save the generated code into the file.
   - `objdump -M intel -CSlw -D -b binary -m i386 <file name>` shows a disassembled code.
   - Use `objdump -m aarch64 -D -b binary` for Aarch64.
