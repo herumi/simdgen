@@ -178,42 +178,32 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	}
 	void gen_setInt(int dst, uint32_t u)
 	{
-		if (debug) {
-			printf("mov tmpW_, 0x%08x\n", u);
-			printf("cpy z%d, tmpW_\n", dst);
-		}
 		mov(tmpW_, u);
 		cpy(ZReg(dst).s, p0, tmpW_);
 	}
 	void gen_copy(int dst, int src)
 	{
-		if (debug) printf("mov z%d, z%d\n", dst, src);
 		mov(ZReg(dst).s, p0, ZReg(src).s);
 	}
 	void gen_add(int dst, int src1, int src2)
 	{
-		if (debug) printf("fadd z%d, z%d, z%d\n", dst, src1, src2);
 		fadd(ZReg(dst).s, ZReg(src1).s, ZReg(src2).s);
 	}
 	void gen_sub(int dst, int src1, int src2)
 	{
-		if (debug) printf("fsub z%d, z%d, z%d\n", dst, src1, src2);
 		fsub(ZReg(dst).s, ZReg(src1).s, ZReg(src2).s);
 	}
 	void gen_mul(int dst, int src1, int src2)
 	{
-		if (debug) printf("fmul z%d, z%d, z%d\n", dst, src1, src2);
 		fmul(ZReg(dst).s, ZReg(src1).s, ZReg(src2).s);
 	}
 	void gen_div(int dst, int src1, int src2)
 	{
-		if (debug) printf("fdiv z%d, z%d, z%d\n", dst, src1, src2);
 		movprfx(ZReg(dst), ZReg(src1));
 		fdiv(ZReg(dst).s, p0, ZReg(src2).s);
 	}
 	void gen_inv(int inout, int n)
 	{
-		if (debug) printf("inv z%d\n", inout);
 		IndexRangeManager ftr(funcTmpReg_);
 		const ZRegSVec t0 = getInputRegVec(inout, n);
 		const ZRegSVec t1 = getTmpRegVec(ftr, n);
@@ -228,7 +218,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	}
 	void gen_exp(int inout, int n)
 	{
-		if (debug) printf("exp z%d\n", inout);
 		const ZRegS log2_e(getFloatIdx(g_expTbl.log2_e));
 		const ZRegD not_mask17(getFloatIdx(u2f(g_expTbl.not_mask17)));
 		const ZRegS one(getFloatIdx(g_expTbl.one));
@@ -263,7 +252,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	}
 	void gen_cosh(int inout, int n)
 	{
-		if (debug) printf("cosh z%d\n", inout);
 		const ZRegSVec t0 = getInputRegVec(inout, n);
 		/*
 			X = exp(|x|)

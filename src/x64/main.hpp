@@ -186,42 +186,32 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	}
 	void gen_setInt(int dst, uint32_t u)
 	{
-		if (debug) {
-			printf("mov eax, 0x%08x\n", u);
-			printf("vpbroadcastd z%d, eax\n", dst);
-		}
 //		mov(eax, u);
 //		vpbroadcastd(Zmm(dst), eax);
 		vbroadcastss(Zmm(dst), ptr[dataReg_ + constIdx_.getIdx(u) * 4]);
 	}
 	void gen_copy(int dst, int src)
 	{
-		if (debug) printf("vmovaps z%d, z%d\n", dst, src);
 		vmovaps(Zmm(dst), Zmm(src));
 	}
 	void gen_add(int dst, int src1, int src2)
 	{
-		if (debug) printf("vaddps z%d, z%d, z%d\n", dst, src1, src2);
 		vaddps(Zmm(dst), Zmm(src1), Zmm(src2));
 	}
 	void gen_sub(int dst, int src1, int src2)
 	{
-		if (debug) printf("vsubps z%d, z%d, z%d\n", dst, src1, src2);
 		vsubps(Zmm(dst), Zmm(src1), Zmm(src2));
 	}
 	void gen_mul(int dst, int src1, int src2)
 	{
-		if (debug) printf("vmulps z%d, z%d, z%d\n", dst, src1, src2);
 		vmulps(Zmm(dst), Zmm(src1), Zmm(src2));
 	}
 	void gen_div(int dst, int src1, int src2)
 	{
-		if (debug) printf("vdivps z%d, z%d, z%d\n", dst, src1, src2);
 		vdivps(Zmm(dst), Zmm(src1), Zmm(src2));
 	}
 	void gen_inv(int inout, int n)
 	{
-		if (debug) printf("inv z%d\n", inout);
 		const Zmm two(getFloatIdx(2.0));
 		IndexRangeManager ftr(funcTmpReg_);
 		const ZmmVec t0 = getInputRegVec(inout, n);
@@ -232,7 +222,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	}
 	void gen_exp(int inout, int n)
 	{
-		if (debug) printf("exp z%d\n", inout);
 		const Zmm log2(getFloatIdx(g_expTbl.log2));
 		const Zmm log2_e(getFloatIdx(g_expTbl.log2_e));
 		const Zmm tbl[] = {
@@ -261,7 +250,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	}
 	void gen_cosh(int inout, int n)
 	{
-		if (debug) printf("cosh z%d\n", inout);
 		const Zmm f0p5(getFloatIdx(0.5));
 		const Zmm x7fffffff(getFloatIdx(u2f(0x7fffffff)));
 		const ZmmVec t0 = getInputRegVec(inout, n);
@@ -280,7 +268,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	}
 	void gen_log(int inout, int n)
 	{
-		if (debug) printf("gen_log %d\n", inout);
 		const Zmm i127shl23(getFloatIdx(u2f(g_logTbl.i127shl23)));
 		const Zmm x7fffff(getFloatIdx(u2f(g_logTbl.x7fffff)));
 		const Zmm x7fffffff(getFloatIdx(u2f(g_logTbl.x7fffffff)));
