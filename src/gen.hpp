@@ -88,8 +88,28 @@ struct IndexRangeManager {
 	}
 };
 
+struct Uint8Vec : std::vector<uint8_t> {
+	friend inline bool operator==(const Uint8Vec& lhs, const Uint8Vec& rhs)
+	{
+		const size_t n = lhs.size();
+		if (n != rhs.size()) return false;
+		return memcmp(lhs.data(), rhs.data(), n) == 0;
+	}
+	friend inline std::ostream& operator<<(std::ostream& os, const Uint8Vec& x)
+	{
+		for (size_t i = 0; i < x.size(); i++) {
+			char buf[2];
+			snprintf(buf, sizeof(buf), "%02x", x[i]);
+			os.write(buf, 2);
+			if ((i & 3) == 3) os << ':';
+		}
+		return os;
+	}
+};
+
 struct GeneratorBase {
 	Index<uint32_t> constIdx_;
+	Index<Uint8Vec> constTblIdx_;
 	FuncInfo funcInfoTbl[FuncTypeN];
 	int simdByte_;
 	int unrollN_;
@@ -154,6 +174,16 @@ struct GeneratorBase {
 	{
 		return getConstIdxOffset() + constIdx_.getIdx(u);
 	}
+	uint32_t getConstTblIdx(const void *p, size_t byteSize) const
+	{
+		const size_t simdByte = 64;
+		if (byteSize > simdByte) throw cybozu::Exception("getConstTblIdx:too large") << byteSize;
+		Uint8Vec u;
+		const uint8_t *src = (const uint8_t*)p;
+		u.assign(src, src + byteSize);
+		u.resize(simdByte);
+		return getConstIdxOffset() + constIdx_.size() + constTblIdx_.getIdx(u);
+	}
 	int getFloatIdx(float f) const
 	{
 		return getConstIdx(f2u(f));
@@ -194,7 +224,7 @@ struct GeneratorBase {
 		if (reduceFuncType_ >= 0) {
 			varN_ += unrollN_;
 		}
-		constN_ = constIdx_.size();
+		constN_ = constIdx_.size() + constTblIdx_.size();
 		funcTmpReg_.setOffset(varN_ + constN_);
 		funcTmpMask_.setOffset(1 + 1); // mask0 and mask1 are reserved
 		maxTmpN_ = tl.getMaxTmpNum() * unrollN_;
