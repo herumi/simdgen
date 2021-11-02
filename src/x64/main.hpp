@@ -196,6 +196,11 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 //		vpbroadcastd(Zmm(dst), eax);
 		vbroadcastss(Zmm(dst), ptr[dataReg_ + constIdx_.getIdx(u) * 4]);
 	}
+	void gen_fullLoad(int dst, uint32_t offset)
+	{
+printf("vmovups(zm%d, ptr[dataReg_ + %08x])\n", dst, offset);
+		vmovups(Zmm(dst), ptr[dataReg_ + offset]);
+	}
 	void gen_copy(int dst, int src)
 	{
 		vmovaps(Zmm(dst), Zmm(src));
@@ -327,6 +332,18 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			LP_(i, n) vfmadd213ps(t2[i], t0[i], tbl[j]);
 		}
 		LP_(i, n) vfmadd213ps(t0[i], t2[i], t1[i]);
+	}
+	void gen_debugFunc(int inout, int n)
+	{
+		if (debug) printf("debugFunc z%d (%d)\n", inout, n);
+#if 0
+		static const float tbl[] = {
+			1, 3, 5, 7, 9, 11, 13, 15, 17
+		};
+		const Zmm tbl(getConstTblIdx(tbl, sizeof(tbl)));
+#endif
+		const ZmmVec t0 = getInputRegVec(inout, n);
+		LP_(i, n) vaddps(t0[i], t0[i], t0[i]);
 	}
 	void gen_tanh(int inout, int n)
 	{

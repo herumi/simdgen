@@ -162,6 +162,7 @@ struct GeneratorBase {
 	int getVarIdx(int i) const { return getVarIdxOffset() + i; }
 	int getReduceVarIdx() const { return getVarIdxOffset() + varN_ - unrollN_; }
 	uint32_t getConstIdxOffset() const { return varN_; }
+	uint32_t getConstTblIdxOffset() const { return varN_ + constIdx_.size(); }
 	uint32_t getTmpOffset() const { return varN_ + constN_ + funcTmpReg_.getSize(); }
 	int getTmpIdx(int i) const { return getTmpOffset() + i; }
 	uint32_t getTotalNum() const { return getTmpOffset() + maxTmpN_; }
@@ -265,6 +266,10 @@ struct GeneratorBase {
 		for (uint32_t i = 0; i < constIdx_.size(); i++) {
 			gen_setInt(getConstIdxOffset() + i, constIdx_.getVal(i));
 		}
+		for (uint32_t i = 0; i < constTblIdx_.size(); i++) {
+			uint32_t offset = constIdx_.size() * 4 + i * 32;
+			gen_fullLoad(getConstTblIdxOffset() + i, offset);
+		}
 	}
 	virtual void exec(const sg::TokenList& tl)
 	{
@@ -281,6 +286,10 @@ struct GeneratorBase {
 	virtual void gen_setInt(int dst, uint32_t u)
 	{
 		if (debug) printf("setImm z%d, %08x\n", dst, u);
+	}
+	virtual void gen_fullLoad(int dst, uint32_t offset)
+	{
+		if (debug) printf("fullLoad z%d, [%08x]\n", dst, offset);
 	}
 	virtual void gen_loadVar(int dst, uint32_t u)
 	{
@@ -325,6 +334,10 @@ struct GeneratorBase {
 	virtual void gen_tanh(int inout, int n)
 	{
 		if (debug) printf("tanh z%d (%d)\n", inout, n);
+	}
+	virtual void gen_debugFunc(int inout, int n)
+	{
+		if (debug) printf("debugFunc z%d (%d)\n", inout, n);
 	}
 	virtual void reduceOne_sum(int d, int s)
 	{
@@ -416,6 +429,7 @@ struct GeneratorBase {
 					case Log: gen_log(pos, unrollN); break;
 					case Cosh: gen_cosh(pos, unrollN); break;
 					case Tanh: gen_tanh(pos, unrollN); break;
+					case DebugFunc: gen_debugFunc(pos, unrollN); break;
 					case RedSum: /* nothing */ break;
 					default:
 						throw cybozu::Exception("bad func") << j << pos << v.v;

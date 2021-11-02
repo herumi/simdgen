@@ -41,6 +41,7 @@ enum FuncType {
 	Log,
 	Cosh,
 	Tanh,
+	DebugFunc,
 	RedBegin,
 	RedSum = RedBegin,
 	FuncTypeN
@@ -54,6 +55,7 @@ inline const char* getFuncName(size_t i)
 		"log",
 		"cosh",
 		"tanh",
+		"_debug_func_",
 		"red_sum",
 	};
 	if (i >= CYBOZU_NUM_OF_ARRAY(tbl)) {
