@@ -336,14 +336,12 @@ printf("vmovups(zm%d, ptr[dataReg_ + %08x])\n", dst, offset);
 	void gen_debugFunc(int inout, int n)
 	{
 		if (debug) printf("debugFunc z%d (%d)\n", inout, n);
-#if 0
 		static const float tbl[] = {
 			1, 3, 5, 7, 9, 11, 13, 15, 17
 		};
-		const Zmm tbl(getConstTblIdx(tbl, sizeof(tbl)));
-#endif
+		const Zmm t(getConstTblIdx(tbl, sizeof(tbl)));
 		const ZmmVec t0 = getInputRegVec(inout, n);
-		LP_(i, n) vaddps(t0[i], t0[i], t0[i]);
+		LP_(i, n) vmovaps(t0[i], t);
 	}
 	void gen_tanh(int inout, int n)
 	{

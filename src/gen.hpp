@@ -98,7 +98,7 @@ struct Uint8Vec : std::vector<uint8_t> {
 	friend inline std::ostream& operator<<(std::ostream& os, const Uint8Vec& x)
 	{
 		for (size_t i = 0; i < x.size(); i++) {
-			char buf[2];
+			char buf[3];
 			snprintf(buf, sizeof(buf), "%02x", x[i]);
 			os.write(buf, 2);
 			if ((i & 3) == 3) os << ':';
@@ -218,6 +218,7 @@ struct GeneratorBase {
 		funcTmpReg_.setSeekMode(true);
 		funcTmpMask_.setSeekMode(true);
 		constIdx_.setSeekMode(true);
+		constTblIdx_.setSeekMode(true);
 
 		execOneLoop(tl, unrollN_);
 
@@ -225,6 +226,7 @@ struct GeneratorBase {
 		funcTmpReg_.setSeekMode(false);
 		funcTmpMask_.setSeekMode(false);
 		constIdx_.setSeekMode(false);
+		constTblIdx_.setSeekMode(false);
 
 		reduceFuncType_ = tl.getReduceFuncType();
 
