@@ -105,6 +105,13 @@ struct Uint8Vec : std::vector<uint8_t> {
 		}
 		return os;
 	}
+	uint32_t get32bit(size_t i) const
+	{
+		if (i * 4 > size()) throw cybozu::Exception("Uint8Vec:get32bit:bad idx") << i;
+		uint32_t v;
+		memcpy(&v, &(*this)[i * 4], 4);
+		return v;
+	}
 };
 
 struct GeneratorBase {
@@ -255,7 +262,7 @@ struct GeneratorBase {
 	}
 	void gen_setConst()
 	{
-		for (uint32_t i = 0; i < constN_; i++) {
+		for (uint32_t i = 0; i < constIdx_.size(); i++) {
 			gen_setInt(getConstIdxOffset() + i, constIdx_.getVal(i));
 		}
 	}

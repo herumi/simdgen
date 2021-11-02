@@ -70,7 +70,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		Label dataL = L();
 		detectUnrollN(tl);
 		setSize(0);
-		for (uint32_t i = 0; i < constN_; i++) {
+		for (uint32_t i = 0; i < constIdx_.size(); i++) {
 			dd(constIdx_.getVal(i));
 		}
 		if (getSize() > dataSize) {
