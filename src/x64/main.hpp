@@ -286,19 +286,17 @@ printf("vmovups(zm%d, ptr[dataReg_ + %08x])\n", dst, offset);
 		const Zmm f2div3(getFloatIdx(g_logTbl.f2div3));
 		const Zmm log2(getFloatIdx(g_logTbl.log2));
 		const Zmm log1p5(getFloatIdx(g_logTbl.log1p5));
-#if 0
-		const Zmm tbl[] = {
-			Zmm(getFloatIdx(g_logTbl.coef[0])),
-			Zmm(getFloatIdx(g_logTbl.coef[1])),
-			Zmm(getFloatIdx(g_logTbl.coef[2])),
-			Zmm(getFloatIdx(g_logTbl.coef[3])),
-			Zmm(getFloatIdx(g_logTbl.coef[4])),
-			Zmm(getFloatIdx(g_logTbl.coef[5])),
-			Zmm(getFloatIdx(g_logTbl.coef[6])),
-			Zmm(getFloatIdx(g_logTbl.coef[7])),
-			Zmm(getFloatIdx(g_logTbl.coef[8])),
-		};
-#endif
+		int logN = g_logTbl.N;
+		ZmmVec tbl;
+		int offset = 0;
+		if (opt.log_use_mem) {
+			offset = getConstTblDataOffset(g_logTbl.coef, logN * 4);
+		} else {
+			for (int i = 0; i < logN; i++) {
+				tbl.push_back(Zmm(getFloatIdx(g_logTbl.coef[i])));
+			}
+		}
+
 		IndexRangeManager ftr(funcTmpReg_);
 		IndexRangeManager ftm(funcTmpMask_);
 		const ZmmVec t0 = getInputRegVec(inout, n);
@@ -327,15 +325,17 @@ printf("vmovups(zm%d, ptr[dataReg_ + %08x])\n", dst, offset);
 			LP_(i, n) vsubps(t0[i]|mask[i], keep[i], one);
 			LP_(i, n) vxorps(t1[i]|mask[i], t1[i]);
 		}
-//		const Zmm ttt(getConstTblIdx(g_logTbl.coef, g_logTbl.N * 4));
-		int offset = getConstTblDataOffset(g_logTbl.coef, g_logTbl.N * 4);
 
-		int logN = g_logTbl.N;
-//		LP_(i, n) vmovaps(t2[i], tbl[logN - 1]);
-		LP_(i, n) vbroadcastss(t2[i], ptr[dataReg_ + offset + (logN - 1) * 4]);
-		for (int j = logN - 2; j >= 0; j--) {
-//			LP_(i, n) vfmadd213ps(t2[i], t0[i], tbl[j]);
-			LP_(i, n) vfmadd213ps(t2[i], t0[i], ptr_b[dataReg_ + offset + j * 4]);
+		if (opt.log_use_mem) {
+			LP_(i, n) vbroadcastss(t2[i], ptr[dataReg_ + offset + (logN - 1) * 4]);
+			for (int j = logN - 2; j >= 0; j--) {
+				LP_(i, n) vfmadd213ps(t2[i], t0[i], ptr_b[dataReg_ + offset + j * 4]);
+			}
+		} else {
+			LP_(i, n) vmovaps(t2[i], tbl[logN - 1]);
+			for (int j = logN - 2; j >= 0; j--) {
+				LP_(i, n) vfmadd213ps(t2[i], t0[i], tbl[j]);
+			}
 		}
 		LP_(i, n) vfmadd213ps(t0[i], t2[i], t1[i]);
 	}
