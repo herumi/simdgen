@@ -75,35 +75,50 @@ struct IndexRangeManager {
 	}
 };
 
-struct Uint8Vec : std::vector<uint8_t> {
-	friend inline bool operator==(const Uint8Vec& lhs, const Uint8Vec& rhs)
+struct SimdArray {
+	static const size_t N = 16;
+	static const size_t byteSize = N * sizeof(uint32_t);
+private:
+	uint32_t d[N];
+public:
+	SimdArray()
+		: d()
 	{
-		const size_t n = lhs.size();
-		if (n != rhs.size()) return false;
-		return memcmp(lhs.data(), rhs.data(), n) == 0;
 	}
-	friend inline std::ostream& operator<<(std::ostream& os, const Uint8Vec& x)
+	SimdArray(const void *p, size_t n)
 	{
-		for (size_t i = 0; i < x.size(); i++) {
-			char buf[3];
-			snprintf(buf, sizeof(buf), "%02x", x[i]);
-			os.write(buf, 2);
+		if (n > byteSize) {
+			throw cybozu::Exception("SimdArray:too large") << n;
+		}
+		memcpy(d, p, n);
+		if (n < byteSize) {
+			memset(((char *)d) + n, 0, byteSize - n);
+		}
+	}
+	friend inline bool operator==(const SimdArray& lhs, const SimdArray& rhs)
+	{
+		return memcmp(lhs.d, rhs.d, byteSize) == 0;
+	}
+	friend inline std::ostream& operator<<(std::ostream& os, const SimdArray& x)
+	{
+		for (size_t i = 0; i < N; i++) {
+			char buf[9];
+			snprintf(buf, sizeof(buf), "%08x", x.d[i]);
+			os.write(buf, 8);
 			if ((i & 3) == 3) os << ':';
 		}
 		return os;
 	}
 	uint32_t get32bit(size_t i) const
 	{
-		if (i * 4 > size()) throw cybozu::Exception("Uint8Vec:get32bit:bad idx") << i;
-		uint32_t v;
-		memcpy(&v, &(*this)[i * 4], 4);
-		return v;
+		if (i > N) throw cybozu::Exception("SimdArray:get32bit:bad idx") << i;
+		return d[i];
 	}
 };
 
 struct GeneratorBase {
 	Index<uint32_t> constIdx_;
-	Index<Uint8Vec> constTblIdx_;
+	Index<SimdArray> constTblIdx_;
 	int simdByte_;
 	int unrollN_;
 	void* addr_;
@@ -170,12 +185,7 @@ struct GeneratorBase {
 	}
 	uint32_t getConstTblIdx(const void *p, size_t byteSize) const
 	{
-		const size_t simdByte = 64;
-		if (byteSize > simdByte) throw cybozu::Exception("getConstTblIdx:too large") << byteSize;
-		Uint8Vec u;
-		const uint8_t *src = (const uint8_t*)p;
-		u.assign(src, src + byteSize);
-		u.resize(simdByte);
+		SimdArray u(p, byteSize);
 		return getConstIdxOffset() + constIdx_.size() + constTblIdx_.getIdx(u);
 	}
 	int getFloatIdx(float f) const
