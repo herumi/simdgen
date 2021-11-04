@@ -286,6 +286,7 @@ printf("vmovups(zm%d, ptr[dataReg_ + %08x])\n", dst, offset);
 		const Zmm f2div3(getFloatIdx(g_logTbl.f2div3));
 		const Zmm log2(getFloatIdx(g_logTbl.log2));
 		const Zmm log1p5(getFloatIdx(g_logTbl.log1p5));
+#if 0
 		const Zmm tbl[] = {
 			Zmm(getFloatIdx(g_logTbl.coef[0])),
 			Zmm(getFloatIdx(g_logTbl.coef[1])),
@@ -297,6 +298,7 @@ printf("vmovups(zm%d, ptr[dataReg_ + %08x])\n", dst, offset);
 			Zmm(getFloatIdx(g_logTbl.coef[7])),
 			Zmm(getFloatIdx(g_logTbl.coef[8])),
 		};
+#endif
 		IndexRangeManager ftr(funcTmpReg_);
 		IndexRangeManager ftm(funcTmpMask_);
 		const ZmmVec t0 = getInputRegVec(inout, n);
@@ -313,7 +315,7 @@ printf("vmovups(zm%d, ptr[dataReg_ + %08x])\n", dst, offset);
 		LP_(i, n) vpandd(t0[i], t0[i], x7fffff);
 		LP_(i, n) vpord(t0[i], t0[i], i127shl23); // y
 
-		LP_(i, n) vfmsub213ps(t0[i], f2div3, tbl[0]); // a
+		LP_(i, n) vfmsub213ps(t0[i], f2div3, one); // a
 		LP_(i, n) vfmadd213ps(t1[i], log2, log1p5); // e
 
 		if (opt.logp1) {
@@ -325,11 +327,15 @@ printf("vmovups(zm%d, ptr[dataReg_ + %08x])\n", dst, offset);
 			LP_(i, n) vsubps(t0[i]|mask[i], keep[i], one);
 			LP_(i, n) vxorps(t1[i]|mask[i], t1[i]);
 		}
+//		const Zmm ttt(getConstTblIdx(g_logTbl.coef, g_logTbl.N * 4));
+		int offset = getConstTblDataOffset(g_logTbl.coef, g_logTbl.N * 4);
 
 		int logN = g_logTbl.N;
-		LP_(i, n) vmovaps(t2[i], tbl[logN - 1]);
+//		LP_(i, n) vmovaps(t2[i], tbl[logN - 1]);
+		LP_(i, n) vbroadcastss(t2[i], ptr[dataReg_ + offset + (logN - 1) * 4]);
 		for (int j = logN - 2; j >= 0; j--) {
-			LP_(i, n) vfmadd213ps(t2[i], t0[i], tbl[j]);
+//			LP_(i, n) vfmadd213ps(t2[i], t0[i], tbl[j]);
+			LP_(i, n) vfmadd213ps(t2[i], t0[i], ptr_b[dataReg_ + offset + j * 4]);
 		}
 		LP_(i, n) vfmadd213ps(t0[i], t2[i], t1[i]);
 	}
@@ -339,9 +345,15 @@ printf("vmovups(zm%d, ptr[dataReg_ + %08x])\n", dst, offset);
 		static const float tbl[] = {
 			1, 3, 5, 7, 9, 11, 13, 15, 17
 		};
-		const Zmm t(getConstTblIdx(tbl, sizeof(tbl)));
 		const ZmmVec t0 = getInputRegVec(inout, n);
+#if 1
+		LP_(i, n) {
+			vmovups(t0[i], ptr[dataReg_ + getConstTblDataOffset(tbl, sizeof(tbl))]);
+		}
+#else
+		const Zmm t(getConstTblIdx(tbl, sizeof(tbl)));
 		LP_(i, n) vmovaps(t0[i], t);
+#endif
 	}
 	void gen_tanh(int inout, int n)
 	{

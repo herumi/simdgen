@@ -188,6 +188,13 @@ struct GeneratorBase {
 		SimdArray u(p, byteSize);
 		return getConstIdxOffset() + constIdx_.size() + constTblIdx_.getIdx(u);
 	}
+	// return offset to dataReg_
+	uint32_t getConstTblDataOffset(const void *p, size_t byteSize) const
+	{
+		SimdArray u(p, byteSize);
+		uint32_t idx = constTblIdx_.getIdx(u);
+		return constIdx_.size() * 4 + idx * SimdArray::byteSize;
+	}
 	int getFloatIdx(float f) const
 	{
 		return getConstIdx(f2u(f));
