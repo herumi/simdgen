@@ -11,19 +11,6 @@
 
 namespace sg {
 
-struct FuncInfo {
-	IntVec constTbl;
-	int tmpRegN; // # of regs used temporary
-	int tmpMaskN; // # of mask regs used temporary
-	bool reduce; // such as sum, max, min, mean
-	FuncInfo()
-		: tmpRegN(0)
-		, tmpMaskN(0)
-		, reduce(false)
-	{
-	}
-};
-
 struct IndexRange {
 	int offset_;
 	int max_;
@@ -117,7 +104,6 @@ struct Uint8Vec : std::vector<uint8_t> {
 struct GeneratorBase {
 	Index<uint32_t> constIdx_;
 	Index<Uint8Vec> constTblIdx_;
-	FuncInfo funcInfoTbl[FuncTypeN];
 	int simdByte_;
 	int unrollN_;
 	void* addr_;

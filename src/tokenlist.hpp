@@ -55,7 +55,7 @@ inline const char* getFuncName(size_t i)
 		"log",
 		"cosh",
 		"tanh",
-		"_debug_func_",
+		"_debug_func",
 		"red_sum",
 	};
 	if (i >= CYBOZU_NUM_OF_ARRAY(tbl)) {
