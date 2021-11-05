@@ -272,8 +272,7 @@ struct GeneratorBase {
 	void gen_setConst()
 	{
 		for (uint32_t i = 0; i < constTblIdx_.size(); i++) {
-			uint32_t offset = i * SimdArray::byteSize;
-			gen_fullLoad(getConstTblIdx0() + i, offset);
+			gen_fullLoad(getConstTblIdx0() + i, i * SimdArray::byteSize);
 		}
 		for (uint32_t i = 0; i < constIdx_.size(); i++) {
 			gen_setInt(getConstIdx0() + i, constIdx_.getVal(i));

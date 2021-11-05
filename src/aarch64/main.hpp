@@ -189,7 +189,11 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 #else
 		mov(tmpW_, u);
 #endif
-		cpy(ZReg(dst).s, p0, tmpW_);
+		cpy(ZRegS(dst), p0, tmpW_);
+	}
+	void gen_fullLoad(int dst, uint32_t offset)
+	{
+		ld1w(ZRegS(dst), p0, ptr(dataReg_, int(offset / SimdArray::byteSize)));
 	}
 	void gen_copy(int dst, int src)
 	{
@@ -346,7 +350,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			1, 3, 5, 7, 9, 11, 13, 15, 17
 		};
 		const ZRegSVec t0 = getInputRegVec(inout, n);
-#if 1
+#if 0
 		LP_(i, n) {
 			ld1w(t0[i], p0, ptr(dataReg_, int(getConstTblOffsetToDataReg(tbl, sizeof(tbl)) / SimdArray::byteSize)));
 		}
