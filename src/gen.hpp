@@ -250,7 +250,7 @@ struct GeneratorBase {
 	}
 	void detectUnrollN(const sg::TokenList& tl)
 	{
-		const int maxTryUnrollN = 4;
+		const int maxTryUnrollN = 5;
 		if (unrollN_ > 0) {
 			if (!setupLayout(tl, unrollN_)) {
 				throw cybozu::Exception("can't unrollN") << unrollN_;
