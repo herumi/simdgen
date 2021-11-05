@@ -58,7 +58,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			gen_reduce(red, src);
 		} else {
 			if (tmpX) {
-				st1w(ZReg(getTmpIdx(0)).s, p1, ptr(dst, tmpX_, LSL, 2));
+				st1w(ZReg(getTmpIdx(0)).s, p1, ptr(dst, *tmpX, LSL, 2));
 			} else {
 				st1w(ZReg(getTmpIdx(i)).s, p0, ptr(dst, i));
 			}
