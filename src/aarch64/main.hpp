@@ -288,17 +288,17 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		const ZRegS log2(getFloatIdx(g_logTbl.log2));
 		const ZRegS f2div3(getFloatIdx(g_logTbl.f2div3));
 		const ZRegS log1p5(getFloatIdx(g_logTbl.log1p5));
-		const ZRegS coef[] = {
-			ZRegS(getFloatIdx(g_logTbl.coef[0])),
-			ZRegS(getFloatIdx(g_logTbl.coef[1])),
-			ZRegS(getFloatIdx(g_logTbl.coef[2])),
-			ZRegS(getFloatIdx(g_logTbl.coef[3])),
-			ZRegS(getFloatIdx(g_logTbl.coef[4])),
-			ZRegS(getFloatIdx(g_logTbl.coef[5])),
-			ZRegS(getFloatIdx(g_logTbl.coef[6])),
-			ZRegS(getFloatIdx(g_logTbl.coef[7])),
-			ZRegS(getFloatIdx(g_logTbl.coef[8])),
-		};
+		const int logN = LogTbl::N;
+		ZRegSVec tbl;
+		int offset = 0;
+		if (opt.log_use_mem) {
+			offset = getConstTblOffsetToDataReg(g_logTbl.coef, logN * 4) / SimdArray::byteSize;
+		} else {
+			for (int i = 0; i < logN; i++) {
+				tbl.push_back(ZRegS(getFloatIdx(g_logTbl.coef[i])));
+			}
+		}
+
 		IndexRangeManager ftr(funcTmpReg_);
 		IndexRangeManager ftm(funcTmpMask_);
 
@@ -319,11 +319,11 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		LP_(i, n) orr(t0[i], p0, i127shl23);
 
 		// fnmsb(a, b, c) = a * b - c
-		LP_(i, n) fnmsb(t0[i], p0, f2div3, coef[0]);
+		LP_(i, n) fnmsb(t0[i], p0, f2div3, tbl[0]);
 		LP_(i, n) fmad(t1[i], p0, log2, log1p5);
 
 		if (opt.logp1) {
-			LP_(i, n) fsub(t2[i], keep[i], coef[0]); // x-1
+			LP_(i, n) fsub(t2[i], keep[i], tbl[0]); // x-1
 			LP_(i, n) fcpy(keep[i], p0, 1.0/8);
 
 			const PRegSVec mask = getTmpMaskVec(ftm, n);
@@ -331,14 +331,17 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			LP_(i, n) mov(t0[i], mask[i], t2[i]);
 			LP_(i, n) eor(t1[i], mask[i], t1[i]);
 		}
-		const int logN = LogTbl::N;
 		// fmad(a, b, c) ; a = a * b + c
-		LP_(i, n) {
-			movprfx(t2[i], p0, coef[logN - 1]);
-			fmad(t2[i], p0, t0[i], coef[logN - 2]);
-		}
-		for (int j = logN - 3; j >= 0; j--) {
-			LP_(i, n) fmad(t2[i], p0, t0[i], coef[j]);
+		if (opt.log_use_mem) {
+			// QQQ
+		} else {
+			LP_(i, n) {
+				movprfx(t2[i], p0, tbl[logN - 1]);
+				fmad(t2[i], p0, t0[i], tbl[logN - 2]);
+			}
+			for (int j = logN - 3; j >= 0; j--) {
+				LP_(i, n) fmad(t2[i], p0, t0[i], tbl[j]);
+			}
 		}
 		// a * x + e
 		LP_(i, n) fmad(t0[i], p0, t2[i], t1[i]);
@@ -352,7 +355,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		const ZRegSVec t0 = getInputRegVec(inout, n);
 #if 0
 		LP_(i, n) {
-			ld1w(t0[i], p0, ptr(dataReg_, int(getConstTblOffsetToDataReg(tbl, sizeof(tbl)) / SimdArray::byteSize)));
+			ld1w(t0[i], p0, ptr(dataReg_, getConstTblOffsetToDataReg(tbl, sizeof(tbl)) / SimdArray::byteSize));
 		}
 #else
 		const ZRegS t(getConstTblIdx(tbl, sizeof(tbl)));

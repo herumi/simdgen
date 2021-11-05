@@ -76,8 +76,8 @@ struct IndexRangeManager {
 };
 
 struct SimdArray {
-	static const size_t N = 16;
-	static const size_t byteSize = N * sizeof(uint32_t);
+	static const int N = 16;
+	static const int byteSize = N * int(sizeof(uint32_t));
 private:
 	uint32_t d[N];
 public:
@@ -185,7 +185,7 @@ struct GeneratorBase {
 		return getConstTblIdx0() + constTblIdx_.getIdx(u);
 	}
 	// return offset to dataReg_
-	uint32_t getConstTblOffsetToDataReg(const void *p, size_t byteSize) const
+	int getConstTblOffsetToDataReg(const void *p, size_t byteSize) const
 	{
 		SimdArray u(p, byteSize);
 		return constTblIdx_.getIdx(u) * SimdArray::byteSize;
