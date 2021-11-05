@@ -117,8 +117,8 @@ public:
 };
 
 struct GeneratorBase {
-	Index<uint32_t> constIdx_;
 	Index<SimdArray> constTblIdx_;
+	Index<uint32_t> constIdx_;
 	int simdByte_;
 	int unrollN_;
 	void* addr_;
@@ -162,8 +162,8 @@ struct GeneratorBase {
 	int getVarIdxOffset() const { return 0; }
 	int getVarIdx(int i) const { return getVarIdxOffset() + i; }
 	int getReduceVarIdx() const { return getVarIdxOffset() + varN_ - unrollN_; }
-	uint32_t getConstIdxOffset() const { return varN_; }
-	uint32_t getConstTblIdxOffset() const { return varN_ + constIdx_.size(); }
+	uint32_t getConstTblIdx0() const { return varN_; }
+	uint32_t getConstIdx0() const { return varN_ + constTblIdx_.size(); }
 	uint32_t getTmpOffset() const { return varN_ + constN_ + funcTmpReg_.getSize(); }
 	int getTmpIdx(int i) const { return getTmpOffset() + i; }
 	uint32_t getTotalNum() const { return getTmpOffset() + maxTmpN_; }
@@ -179,21 +179,24 @@ struct GeneratorBase {
 		puts("---");
 	}
 
-	uint32_t getConstIdx(uint32_t u) const
-	{
-		return getConstIdxOffset() + constIdx_.getIdx(u);
-	}
 	uint32_t getConstTblIdx(const void *p, size_t byteSize) const
 	{
 		SimdArray u(p, byteSize);
-		return getConstIdxOffset() + constIdx_.size() + constTblIdx_.getIdx(u);
+		return getConstTblIdx0() + constTblIdx_.getIdx(u);
 	}
 	// return offset to dataReg_
-	uint32_t getConstTblDataOffset(const void *p, size_t byteSize) const
+	uint32_t getConstTblOffsetToDataReg(const void *p, size_t byteSize) const
 	{
 		SimdArray u(p, byteSize);
-		uint32_t idx = constTblIdx_.getIdx(u);
-		return constIdx_.size() * 4 + idx * SimdArray::byteSize;
+		return constTblIdx_.getIdx(u) * SimdArray::byteSize;
+	}
+	uint32_t getConstIdx(uint32_t u) const
+	{
+		return getConstIdx0() + constIdx_.getIdx(u);
+	}
+	uint32_t getConstOffsetToDataReg(uint32_t u) const
+	{
+		return constTblIdx_.size() * SimdArray::byteSize + constIdx_.getIdx(u) * 4;
 	}
 	int getFloatIdx(float f) const
 	{
@@ -268,12 +271,12 @@ struct GeneratorBase {
 	}
 	void gen_setConst()
 	{
-		for (uint32_t i = 0; i < constIdx_.size(); i++) {
-			gen_setInt(getConstIdxOffset() + i, constIdx_.getVal(i));
-		}
 		for (uint32_t i = 0; i < constTblIdx_.size(); i++) {
-			uint32_t offset = constIdx_.size() * 4 + i * 32;
-			gen_fullLoad(getConstTblIdxOffset() + i, offset);
+			uint32_t offset = i * SimdArray::byteSize;
+			gen_fullLoad(getConstTblIdx0() + i, offset);
+		}
+		for (uint32_t i = 0; i < constIdx_.size(); i++) {
+			gen_setInt(getConstIdx0() + i, constIdx_.getVal(i));
 		}
 	}
 	virtual void exec(const sg::TokenList& tl)
@@ -384,7 +387,7 @@ struct GeneratorBase {
 				LP_(i, unrollN) stack[stackPos++] = getVarIdxOffset() + v.v + i;
 				break;
 			case Const:
-				LP_(i, unrollN) stack[stackPos++] = getConstIdxOffset() + constIdx_.getIdx(v.v);
+				LP_(i, unrollN) stack[stackPos++] = getConstIdx0() + constIdx_.getIdx(v.v);
 				break;
 			case Op:
 				LP_(i, unrollN) {

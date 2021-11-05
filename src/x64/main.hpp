@@ -73,14 +73,14 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		detectUnrollN(tl);
 
 		setSize(0);
-		for (uint32_t i = 0; i < constIdx_.size(); i++) {
-			dd(constIdx_.getVal(i));
-		}
 		for (uint32_t i = 0; i < constTblIdx_.size(); i++) {
 			const SimdArray& v = constTblIdx_.getVal(i);
 			for (size_t j = 0; j < v.N; j++) {
 				dd(v.get32bit(j));
 			}
+		}
+		for (uint32_t i = 0; i < constIdx_.size(); i++) {
+			dd(constIdx_.getVal(i));
 		}
 		if (getSize() > dataSize) {
 			throw cybozu::Exception("bad data size") << getSize();
@@ -194,7 +194,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	{
 //		mov(eax, u);
 //		vpbroadcastd(Zmm(dst), eax);
-		vbroadcastss(Zmm(dst), ptr[dataReg_ + constIdx_.getIdx(u) * 4]);
+		vbroadcastss(Zmm(dst), ptr[dataReg_ + getConstOffsetToDataReg(u)]);
 	}
 	void gen_fullLoad(int dst, uint32_t offset)
 	{
@@ -290,7 +290,7 @@ printf("vmovups(zm%d, ptr[dataReg_ + %08x])\n", dst, offset);
 		ZmmVec tbl;
 		int offset = 0;
 		if (opt.log_use_mem) {
-			offset = getConstTblDataOffset(g_logTbl.coef, logN * 4);
+			offset = getConstTblOffsetToDataReg(g_logTbl.coef, logN * 4);
 		} else {
 			for (int i = 0; i < logN; i++) {
 				tbl.push_back(Zmm(getFloatIdx(g_logTbl.coef[i])));
@@ -348,7 +348,7 @@ printf("vmovups(zm%d, ptr[dataReg_ + %08x])\n", dst, offset);
 		const ZmmVec t0 = getInputRegVec(inout, n);
 #if 1
 		LP_(i, n) {
-			vmovups(t0[i], ptr[dataReg_ + getConstTblDataOffset(tbl, sizeof(tbl))]);
+			vmovups(t0[i], ptr[dataReg_ + getConstTblOffsetToDataReg(tbl, sizeof(tbl))]);
 		}
 #else
 		const Zmm t(getConstTblIdx(tbl, sizeof(tbl)));

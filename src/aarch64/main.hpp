@@ -184,7 +184,11 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	}
 	void gen_setInt(int dst, uint32_t u)
 	{
+#if 1
+		ldr(tmpW_, ptr(dataReg_, constIdx_.getIdx(u) * 4));
+#else
 		mov(tmpW_, u);
+#endif
 		cpy(ZReg(dst).s, p0, tmpW_);
 	}
 	void gen_copy(int dst, int src)
@@ -334,6 +338,23 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		}
 		// a * x + e
 		LP_(i, n) fmad(t0[i], p0, t2[i], t1[i]);
+	}
+	void gen_debugFunc(int inout, int n)
+	{
+		if (debug) printf("debugFunc z%d (%d)\n", inout, n);
+		static const float tbl[] = {
+			1, 3, 5, 7, 9, 11, 13, 15, 17
+		};
+		const ZRegSVec t0 = getInputRegVec(inout, n);
+#if 1
+		LP_(i, n) {
+			ld1w(t0[i], p0, ptr(dataReg_, getConstTblDataOffset(tbl, sizeof(tbl))));
+		}
+#else
+		const ZRegS t(getConstTblIdx(tbl, sizeof(tbl)));
+printf("idx=%d\n", getConstTblIdx(tbl, sizeof(tbl)));
+		LP_(i, n) mov(t0[i], p0, t);
+#endif
 	}
 	void gen_tanh(int inout, int n)
 	{
