@@ -70,14 +70,14 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		Label dataL = L();
 		detectUnrollN(tl);
 		setSize(0);
-		for (uint32_t i = 0; i < constIdx_.size(); i++) {
-			dd(constIdx_.getVal(i));
-		}
 		for (uint32_t i = 0; i < constTblIdx_.size(); i++) {
 			const SimdArray& v = constTblIdx_.getVal(i);
 			for (size_t j = 0; j < v.N; j++) {
 				dd(v.get32bit(j));
 			}
+		}
+		for (uint32_t i = 0; i < constIdx_.size(); i++) {
+			dd(constIdx_.getVal(i));
 		}
 		if (getSize() > dataSize) {
 			throw cybozu::Exception("bad data size") << getSize();
@@ -348,7 +348,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		const ZRegSVec t0 = getInputRegVec(inout, n);
 #if 1
 		LP_(i, n) {
-			ld1w(t0[i], p0, ptr(dataReg_, getConstTblDataOffset(tbl, sizeof(tbl))));
+			ld1w(t0[i], p0, ptr(dataReg_, int(getConstTblOffsetToDataReg(tbl, sizeof(tbl)) / SimdArray::byteSize)));
 		}
 #else
 		const ZRegS t(getConstTblIdx(tbl, sizeof(tbl)));
