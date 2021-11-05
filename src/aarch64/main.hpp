@@ -235,7 +235,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	{
 		const ZRegS log2_e(getFloatIdx(g_expTbl.log2_e));
 		const ZRegD not_mask17(getFloatIdx(u2f(g_expTbl.not_mask17)));
-		const ZRegS one(getFloatIdx(g_expTbl.one));
+		const ZRegS one(getFloatIdx(1.0));
 		const ZRegS coeff1(getFloatIdx(g_expTbl.coeff1));
 		const ZRegS coeff2(getFloatIdx(g_expTbl.coeff2));
 		IndexRangeManager ftr(funcTmpReg_);
@@ -289,11 +289,12 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		const ZRegS log2(getFloatIdx(g_logTbl.log2));
 		const ZRegS f2div3(getFloatIdx(g_logTbl.f2div3));
 		const ZRegS log1p5(getFloatIdx(g_logTbl.log1p5));
+		const ZRegS one(getFloatIdx(1.0));
 		const int logN = LogTbl::N;
 		ZRegSVec tbl;
 		int offset = 0;
 		if (opt.log_use_mem) {
-			offset = getConstTblOffsetToDataReg(g_logTbl.coef, logN * 4) / SimdArray::byteSize;
+			offset = getConstTblOffsetToDataReg(g_logTbl.coef, logN * 4);
 		} else {
 			for (int i = 0; i < logN; i++) {
 				tbl.push_back(ZRegS(getFloatIdx(g_logTbl.coef[i])));
@@ -337,7 +338,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			// QQQ
 		} else {
 			LP_(i, n) {
-				movprfx(t2[i], p0, tbl[logN - 1]);
+				movprfx(ZReg(t2[i].getIdx()), ZReg(tbl[logN - 1].getIdx()));
 				fmad(t2[i], p0, t0[i], tbl[logN - 2]);
 			}
 			for (int j = logN - 3; j >= 0; j--) {
