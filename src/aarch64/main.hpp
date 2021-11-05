@@ -84,6 +84,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		}
 		setSize(dataSize);
 		addr_ = getCurr<void*>();
+		if (opt.break_point) brk(0);
 
 		adr(dataReg_, dataL);
 		ptrue(p0.s);

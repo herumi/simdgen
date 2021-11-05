@@ -6,12 +6,14 @@
 struct SgOpt {
 	int unrollN;
 	bool debug;
+	bool break_point;
 	bool logp1;
 	bool log_use_mem;
 	std::string dumpName;
 	SgOpt()
 		: unrollN(0)
 		, debug(false)
+		, break_point(false)
 		, logp1(true)
 		, log_use_mem(false)
 		, dumpName("")
@@ -31,6 +33,10 @@ struct SgOpt {
 			if (k == "debug") {
 				debug = v == "1";
 				if (debug) printf("debug=%d\n", debug);
+			} else
+			if (k == "break_point") {
+				break_point = v == "1";
+				if (debug) printf("break_point=%d\n", break_point);
 			} else
 			if (k == "unroll") {
 				unrollN = cybozu::atoi(v);

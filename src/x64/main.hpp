@@ -87,6 +87,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		}
 		setSize(dataSize);
 		addr_ = getCurr<void*>();
+		if (opt.break_point) int3();
 		{
 			int keepN = 0;
 			if (totalN_ > maxFreeN) keepN = totalN_ - maxFreeN;
