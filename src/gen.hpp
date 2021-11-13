@@ -117,7 +117,8 @@ public:
 };
 
 struct GeneratorBase {
-	Index<SimdArray> constTblIdx_;
+	Index<SimdArray> constTblMem_;
+	Index<uint32_t> constTblIdx_;
 	Index<uint32_t> constIdx_;
 	int simdByte_;
 	int unrollN_;
@@ -182,13 +183,14 @@ struct GeneratorBase {
 	uint32_t getConstTblIdx(const void *p, size_t byteSize) const
 	{
 		SimdArray u(p, byteSize);
-		return getConstTblIdx0() + constTblIdx_.getIdx(u);
+		uint32_t idx = constTblMem_.getIdx(u);
+		return getConstTblIdx0() + constTblIdx_.getIdx(idx);
 	}
 	// return offset to dataReg_
 	int getConstTblOffsetToDataReg(const void *p, size_t byteSize) const
 	{
 		SimdArray u(p, byteSize);
-		return constTblIdx_.getIdx(u) * SimdArray::byteSize;
+		return constTblMem_.getIdx(u) * SimdArray::byteSize;
 	}
 	uint32_t getConstIdx(uint32_t u) const
 	{
@@ -196,7 +198,7 @@ struct GeneratorBase {
 	}
 	uint32_t getConstOffsetToDataReg(uint32_t u) const
 	{
-		return constTblIdx_.size() * SimdArray::byteSize + constIdx_.getIdx(u) * 4;
+		return constTblMem_.size() * SimdArray::byteSize + constIdx_.getIdx(u) * 4;
 	}
 	int getFloatIdx(float f) const
 	{
@@ -224,6 +226,7 @@ struct GeneratorBase {
 		funcTmpReg_.setSeekMode(true);
 		funcTmpMask_.setSeekMode(true);
 		constIdx_.setSeekMode(true);
+		constTblMem_.setSeekMode(true);
 		constTblIdx_.setSeekMode(true);
 
 		execOneLoop(tl, unrollN_);
@@ -232,6 +235,7 @@ struct GeneratorBase {
 		funcTmpReg_.setSeekMode(false);
 		funcTmpMask_.setSeekMode(false);
 		constIdx_.setSeekMode(false);
+		constTblMem_.setSeekMode(false);
 		constTblIdx_.setSeekMode(false);
 
 		reduceFuncType_ = tl.getReduceFuncType();
@@ -272,7 +276,7 @@ struct GeneratorBase {
 	void gen_setConst()
 	{
 		for (uint32_t i = 0; i < constTblIdx_.size(); i++) {
-			gen_fullLoad(getConstTblIdx0() + i, i * SimdArray::byteSize);
+			gen_fullLoad(getConstTblIdx0() + i, constTblIdx_.getIdx(i) * SimdArray::byteSize);
 		}
 		for (uint32_t i = 0; i < constIdx_.size(); i++) {
 			gen_setInt(getConstIdx0() + i, constIdx_.getVal(i));

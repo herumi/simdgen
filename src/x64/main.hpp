@@ -73,8 +73,8 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		detectUnrollN(tl);
 
 		setSize(0);
-		for (uint32_t i = 0; i < constTblIdx_.size(); i++) {
-			const SimdArray& v = constTblIdx_.getVal(i);
+		for (uint32_t i = 0; i < constTblMem_.size(); i++) {
+			const SimdArray& v = constTblMem_.getVal(i);
 			for (size_t j = 0; j < v.N; j++) {
 				dd(v.get32bit(j));
 			}
