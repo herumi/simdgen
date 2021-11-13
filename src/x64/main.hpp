@@ -280,13 +280,8 @@ printf("vmovups(zm%d, ptr[dataReg_ + %08x])\n", dst, offset);
 	}
 	void gen_log(int inout, int n)
 	{
-		const Zmm i127shl23(getFloatIdx(u2f(g_logTbl.i127shl23)));
-		const Zmm x7fffff(getFloatIdx(u2f(g_logTbl.x7fffff)));
-		const Zmm x7fffffff(getFloatIdx(u2f(g_logTbl.x7fffffff)));
 		const Zmm one(getFloatIdx(1.0f));
-		const Zmm f2div3(getFloatIdx(g_logTbl.f2div3));
 		const Zmm log2(getFloatIdx(g_logTbl.log2));
-		const Zmm log1p5(getFloatIdx(g_logTbl.log1p5));
 		int logN = g_logTbl.N;
 		ZmmVec tbl;
 		int offset = 0;
@@ -308,6 +303,9 @@ printf("vmovups(zm%d, ptr[dataReg_ + %08x])\n", dst, offset);
 			keep = getTmpRegVec(ftr, n);
 			LP_(i, n) vmovaps(keep[i], t0[i]);
 		}
+		const Zmm i127shl23(getFloatIdx(u2f(g_logTbl.i127shl23)));
+		const Zmm x7fffff(getFloatIdx(u2f(g_logTbl.x7fffff)));
+		const Zmm f2div3(getFloatIdx(g_logTbl.f2div3));
 		LP_(i, n) vpsubd(t1[i], t0[i], i127shl23);
 		LP_(i, n) vpsrad(t1[i], t1[i], 23); // e
 		LP_(i, n) vcvtdq2ps(t1[i], t1[i]); // float(e)
@@ -315,11 +313,19 @@ printf("vmovups(zm%d, ptr[dataReg_ + %08x])\n", dst, offset);
 		LP_(i, n) vpord(t0[i], t0[i], i127shl23); // y
 
 		LP_(i, n) vfmsub213ps(t0[i], f2div3, one); // a
-		LP_(i, n) vfmadd213ps(t1[i], log2, log1p5); // e
+		if (opt.log_use_mem) {
+			Zmm t(ftr.allocIdx());
+			vbroadcastss(t, ptr[dataReg_ + getConstOffsetToDataReg(f2u(log(1.5)))]);
+			LP_(i, n) vfmadd213ps(t1[i], log2, t); // e
+		} else {
+			const Zmm log1p5(getFloatIdx(log(1.5)));
+			LP_(i, n) vfmadd213ps(t1[i], log2, log1p5); // e
+		}
 
 		if (opt.logp1) {
 			OpmaskVec mask = getTmpMaskVec(ftm, n);
 			const Zmm f1div8(getFloatIdx(g_logTbl.f1div8));
+			const Zmm x7fffffff(getFloatIdx(u2f(g_logTbl.x7fffffff)));
 			LP_(i, n) vsubps(t2[i], keep[i], one);
 			LP_(i, n) vandps(t2[i], t2[i], x7fffffff);
 			LP_(i, n) vcmpltps(mask[i], t2[i], f1div8);
