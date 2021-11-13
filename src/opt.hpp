@@ -9,6 +9,7 @@ struct SgOpt {
 	bool break_point;
 	bool logp1;
 	bool log_use_mem;
+	bool use_mem;
 	std::string dumpName;
 	SgOpt()
 		: unrollN(0)
@@ -16,6 +17,7 @@ struct SgOpt {
 		, break_point(false)
 		, logp1(true)
 		, log_use_mem(false)
+		, use_mem(false)
 		, dumpName("")
 	{
 	}
@@ -54,6 +56,13 @@ struct SgOpt {
 			if (k == "log_use_mem") {
 				log_use_mem = v == "1";
 				if (debug) printf("log_use_mem=%d\n", log_use_mem);
+			} else
+			if (k == "use_mem") {
+				use_mem = v == "1";
+				if (use_mem) {
+					log_use_mem = true;
+				}
+				if (debug) printf("use_mem=%d\n", log_use_mem);
 			} else
 			{
 				throw cybozu::Exception("bad option") << k << v;
