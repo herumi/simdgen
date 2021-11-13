@@ -78,8 +78,8 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 				dd(v.get32bit(j));
 			}
 		}
-		for (uint32_t i = 0; i < constIdx_.size(); i++) {
-			dd(constIdx_.getVal(i));
+		for (uint32_t i = 0; i < constMem_.size(); i++) {
+			dd(constMem_.getVal(i));
 		}
 		if (getSize() > dataSize) {
 			throw cybozu::Exception("bad data size") << getSize();

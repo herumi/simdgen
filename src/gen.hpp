@@ -117,9 +117,9 @@ public:
 };
 
 struct GeneratorBase {
-	Index<SimdArray> constTblMem_;
-	Index<uint32_t> constTblIdx_;
-	Index<uint32_t> constIdx_;
+	Index<SimdArray> constTblMem_; // 64 byte simd data
+	Index<uint32_t> constTblIdx_; // reg idx to simd data
+	Index<uint32_t> constMem_;
 	int simdByte_;
 	int unrollN_;
 	void* addr_;
@@ -194,11 +194,11 @@ struct GeneratorBase {
 	}
 	uint32_t getConstIdx(uint32_t u) const
 	{
-		return getConstIdx0() + constIdx_.getIdx(u);
+		return getConstIdx0() + constMem_.getIdx(u);
 	}
 	uint32_t getConstOffsetToDataReg(uint32_t u) const
 	{
-		return constTblMem_.size() * SimdArray::byteSize + constIdx_.getIdx(u) * 4;
+		return constTblMem_.size() * SimdArray::byteSize + constMem_.getIdx(u) * 4;
 	}
 	int getFloatIdx(float f) const
 	{
@@ -210,11 +210,11 @@ struct GeneratorBase {
 	bool setupLayout(const sg::TokenList& tl, int unrollN)
 	{
 		unrollN_ = unrollN;
-		// set constIdx_ by consts used in tl
+		// set constMem_ by consts used in tl
 		const sg::ValueVec& vv = tl.getValueVec();
 		for (size_t i = 0; i < vv.size(); i++) {
 			if (vv[i].type == Const) {
-				constIdx_.append(vv[i].v);
+				constMem_.append(vv[i].v);
 			}
 		}
 		/*
@@ -225,7 +225,7 @@ struct GeneratorBase {
 		*/
 		funcTmpReg_.setSeekMode(true);
 		funcTmpMask_.setSeekMode(true);
-		constIdx_.setSeekMode(true);
+		constMem_.setSeekMode(true);
 		constTblMem_.setSeekMode(true);
 		constTblIdx_.setSeekMode(true);
 
@@ -234,7 +234,7 @@ struct GeneratorBase {
 		// set ordinary mode
 		funcTmpReg_.setSeekMode(false);
 		funcTmpMask_.setSeekMode(false);
-		constIdx_.setSeekMode(false);
+		constMem_.setSeekMode(false);
 		constTblMem_.setSeekMode(false);
 		constTblIdx_.setSeekMode(false);
 
@@ -244,7 +244,7 @@ struct GeneratorBase {
 		if (reduceFuncType_ >= 0) {
 			varN_ += unrollN_;
 		}
-		constN_ = constIdx_.size() + constTblIdx_.size();
+		constN_ = constMem_.size() + constTblIdx_.size();
 		funcTmpReg_.setOffset(varN_ + constN_);
 		funcTmpMask_.setOffset(1 + 1); // mask0 and mask1 are reserved
 		maxTmpN_ = tl.getMaxTmpNum() * unrollN_;
@@ -278,8 +278,8 @@ struct GeneratorBase {
 		for (uint32_t i = 0; i < constTblIdx_.size(); i++) {
 			gen_fullLoad(getConstTblIdx0() + i, constTblIdx_.getIdx(i) * SimdArray::byteSize);
 		}
-		for (uint32_t i = 0; i < constIdx_.size(); i++) {
-			gen_setInt(getConstIdx0() + i, constIdx_.getVal(i));
+		for (uint32_t i = 0; i < constMem_.size(); i++) {
+			gen_setInt(getConstIdx0() + i, constMem_.getVal(i));
 		}
 	}
 	virtual void exec(const sg::TokenList& tl)
@@ -390,7 +390,7 @@ struct GeneratorBase {
 				LP_(i, unrollN) stack[stackPos++] = getVarIdxOffset() + v.v + i;
 				break;
 			case Const:
-				LP_(i, unrollN) stack[stackPos++] = getConstIdx0() + constIdx_.getIdx(v.v);
+				LP_(i, unrollN) stack[stackPos++] = getConstIdx0() + constMem_.getIdx(v.v);
 				break;
 			case Op:
 				LP_(i, unrollN) {
