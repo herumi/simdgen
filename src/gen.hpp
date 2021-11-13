@@ -117,9 +117,13 @@ public:
 };
 
 struct GeneratorBase {
-	Index<SimdArray> constTblMem_; // 64 byte simd data
-	Index<uint32_t> constTblIdx_; // reg idx to simd data
-	Index<uint32_t> constMem_;
+	// simd memory data and preload registers
+	Index<SimdArray> constTblMem_; // simd memory
+	Index<uint32_t> constTblIdx_; // preload regs
+
+	// float/uint32_t data and preload registers
+	Index<uint32_t> constMem_; // 4 byte float memory
+	Index<uint32_t> constIdx_; // preload regs
 	int simdByte_;
 	int unrollN_;
 	void* addr_;
@@ -179,26 +183,26 @@ struct GeneratorBase {
 		printf("funcTmpMask_.getMax()=%d\n", funcTmpMask_.getMax());
 		puts("---");
 	}
-
+	// return byte offset to dataReg_
+	int getConstTblOffsetToDataReg(const void *p, size_t byteSize) const
+	{
+		SimdArray u(p, byteSize);
+		return constTblMem_.getIdx(u) * SimdArray::byteSize;
+	}
+	uint32_t getConstOffsetToDataReg(uint32_t u) const
+	{
+		return constTblMem_.size() * SimdArray::byteSize + constMem_.getIdx(u) * 4;
+	}
 	uint32_t getConstTblIdx(const void *p, size_t byteSize) const
 	{
 		SimdArray u(p, byteSize);
 		uint32_t idx = constTblMem_.getIdx(u);
 		return getConstTblIdx0() + constTblIdx_.getIdx(idx);
 	}
-	// return offset to dataReg_
-	int getConstTblOffsetToDataReg(const void *p, size_t byteSize) const
-	{
-		SimdArray u(p, byteSize);
-		return constTblMem_.getIdx(u) * SimdArray::byteSize;
-	}
 	uint32_t getConstIdx(uint32_t u) const
 	{
-		return getConstIdx0() + constMem_.getIdx(u);
-	}
-	uint32_t getConstOffsetToDataReg(uint32_t u) const
-	{
-		return constTblMem_.size() * SimdArray::byteSize + constMem_.getIdx(u) * 4;
+		uint32_t idx = constMem_.getIdx(u);
+		return getConstIdx0() + constIdx_.getIdx(idx);
 	}
 	int getFloatIdx(float f) const
 	{
@@ -214,7 +218,8 @@ struct GeneratorBase {
 		const sg::ValueVec& vv = tl.getValueVec();
 		for (size_t i = 0; i < vv.size(); i++) {
 			if (vv[i].type == Const) {
-				constMem_.append(vv[i].v);
+				uint32_t idx = constMem_.append(vv[i].v);
+				constIdx_.append(idx);
 			}
 		}
 		/*
@@ -226,6 +231,7 @@ struct GeneratorBase {
 		funcTmpReg_.setSeekMode(true);
 		funcTmpMask_.setSeekMode(true);
 		constMem_.setSeekMode(true);
+		constIdx_.setSeekMode(true);
 		constTblMem_.setSeekMode(true);
 		constTblIdx_.setSeekMode(true);
 
@@ -235,6 +241,7 @@ struct GeneratorBase {
 		funcTmpReg_.setSeekMode(false);
 		funcTmpMask_.setSeekMode(false);
 		constMem_.setSeekMode(false);
+		constIdx_.setSeekMode(false);
 		constTblMem_.setSeekMode(false);
 		constTblIdx_.setSeekMode(false);
 
@@ -244,7 +251,7 @@ struct GeneratorBase {
 		if (reduceFuncType_ >= 0) {
 			varN_ += unrollN_;
 		}
-		constN_ = constMem_.size() + constTblIdx_.size();
+		constN_ = constIdx_.size() + constTblIdx_.size();
 		funcTmpReg_.setOffset(varN_ + constN_);
 		funcTmpMask_.setOffset(1 + 1); // mask0 and mask1 are reserved
 		maxTmpN_ = tl.getMaxTmpNum() * unrollN_;
@@ -278,8 +285,8 @@ struct GeneratorBase {
 		for (uint32_t i = 0; i < constTblIdx_.size(); i++) {
 			gen_fullLoad(getConstTblIdx0() + i, constTblIdx_.getIdx(i) * SimdArray::byteSize);
 		}
-		for (uint32_t i = 0; i < constMem_.size(); i++) {
-			gen_setInt(getConstIdx0() + i, constMem_.getVal(i));
+		for (uint32_t i = 0; i < constIdx_.size(); i++) {
+			gen_setInt(getConstIdx0() + i, constMem_.getVal(constIdx_.getVal(i)));
 		}
 	}
 	virtual void exec(const sg::TokenList& tl)
@@ -390,7 +397,7 @@ struct GeneratorBase {
 				LP_(i, unrollN) stack[stackPos++] = getVarIdxOffset() + v.v + i;
 				break;
 			case Const:
-				LP_(i, unrollN) stack[stackPos++] = getConstIdx0() + constMem_.getIdx(v.v);
+				LP_(i, unrollN) stack[stackPos++] = getConstIdx(v.v);
 				break;
 			case Op:
 				LP_(i, unrollN) {
