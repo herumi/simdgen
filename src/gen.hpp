@@ -218,8 +218,7 @@ struct GeneratorBase {
 		const sg::ValueVec& vv = tl.getValueVec();
 		for (size_t i = 0; i < vv.size(); i++) {
 			if (vv[i].type == Const) {
-				uint32_t idx = constMem_.append(vv[i].v);
-				constIdx_.append(idx);
+				constMem_.append(vv[i].v);
 			}
 		}
 		/*
@@ -295,11 +294,7 @@ struct GeneratorBase {
 		setupLayout(tl, 1);
 		gen_setConst();
 		puts("execOneLoop");
-		for (uint32_t i = 0; i < varN_; i++) {
-			gen_loadVar(getVarIdx(i), i);
-		}
 		execOneLoop(tl, 1);
-//		gen_saveVar(0, getTmpOffset());
 	}
 	virtual void gen_setInt(int dst, uint32_t u)
 	{
@@ -308,10 +303,6 @@ struct GeneratorBase {
 	virtual void gen_fullLoad(int dst, uint32_t offset)
 	{
 		if (debug) printf("fullLoad z%d, [%08x]\n", dst, offset);
-	}
-	virtual void gen_loadVar(int dst, uint32_t u)
-	{
-		if (debug) printf("loadVar z%d, [%u]\n", dst, u);
 	}
 	virtual void gen_copy(int dst, int src)
 	{
