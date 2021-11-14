@@ -29,7 +29,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 
 	Generator()
 		: CodeGenerator(totalSize, DontSetProtectRWE)
-		, dataReg_(rax)
+		, dataReg_(rdx)
 	{
 		simdByte_ = 512 / 8;
 		maxSimdRegN_ = 32;
@@ -92,7 +92,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		{
 			int keepN = 0;
 			if (totalN_ > maxFreeN) keepN = totalN_ - maxFreeN;
-			StackFrame sf(this, 3, 1 | UseRCX, keepN * simdByte_);
+			StackFrame sf(this, 3, 1 | UseRCX | UseRDX, keepN * simdByte_);
 			// store regs
 			for (int i = 0; i < keepN; i++) {
 				vmovups(ptr[rsp + i * simdByte_], Zmm(maxFreeN + i));
@@ -304,22 +304,34 @@ printf("vmovups(zm%d, ptr[dataReg_ + %08x])\n", dst, offset);
 			keep = getTmpRegVec(ftr, n);
 			LP_(i, n) vmovaps(keep[i], t0[i]);
 		}
-		const Zmm i127shl23(getFloatIdx(u2f(g_logTbl.i127shl23)));
-		const Zmm x7fffff(getFloatIdx(u2f(g_logTbl.x7fffff)));
-		const Zmm f2div3(getFloatIdx(g_logTbl.f2div3));
-		LP_(i, n) vpsubd(t1[i], t0[i], i127shl23);
-		LP_(i, n) vpsrad(t1[i], t1[i], 23); // e
-		LP_(i, n) vcvtdq2ps(t1[i], t1[i]); // float(e)
-		LP_(i, n) vpandd(t0[i], t0[i], x7fffff);
-		LP_(i, n) vpord(t0[i], t0[i], i127shl23); // y
 
-		LP_(i, n) vfmsub213ps(t0[i], f2div3, one); // a
 		if (opt.log_use_mem) {
-			Zmm t(ftr.allocIdx());
-			vbroadcastss(t, ptr[dataReg_ + getConstOffsetToDataReg(f2u(log(1.5)))]);
-			LP_(i, n) vfmadd213ps(t1[i], log2, t); // e
+			Zmm c1(ftr.allocIdx());
+			Zmm c2(ftr.allocIdx());
+			mov(eax, 127 << 23);
+			vpbroadcastd(c2, eax);
+			const Zmm f2div3(getFloatIdx(g_logTbl.f2div3));
+			LP_(i, n) vpsubd(t1[i], t0[i], c2);
+			LP_(i, n) vpsrad(t1[i], t1[i], 23); // e
+			LP_(i, n) vcvtdq2ps(t1[i], t1[i]); // float(e)
+			mov(eax, 0x7fffff);
+			vpbroadcastd(c1, eax);
+			LP_(i, n) vpandd(t0[i], t0[i], c1);
+			LP_(i, n) vpord(t0[i], t0[i], c2); // y
+			LP_(i, n) vfmsub213ps(t0[i], f2div3, one); // a
+			vbroadcastss(c1, ptr[dataReg_ + getConstOffsetToDataReg(f2u(log(1.5)))]);
+			LP_(i, n) vfmadd213ps(t1[i], log2, c1); // e
 		} else {
 			const Zmm log1p5(getFloatIdx(log(1.5)));
+			const Zmm i127shl23(getFloatIdx(u2f(g_logTbl.i127shl23)));
+			const Zmm x7fffff(getFloatIdx(u2f(g_logTbl.x7fffff)));
+			const Zmm f2div3(getFloatIdx(g_logTbl.f2div3));
+			LP_(i, n) vpsubd(t1[i], t0[i], i127shl23);
+			LP_(i, n) vpsrad(t1[i], t1[i], 23); // e
+			LP_(i, n) vcvtdq2ps(t1[i], t1[i]); // float(e)
+			LP_(i, n) vpandd(t0[i], t0[i], x7fffff);
+			LP_(i, n) vpord(t0[i], t0[i], i127shl23); // y
+			LP_(i, n) vfmsub213ps(t0[i], f2div3, one); // a
 			LP_(i, n) vfmadd213ps(t1[i], log2, log1p5); // e
 		}
 
@@ -335,9 +347,12 @@ printf("vmovups(zm%d, ptr[dataReg_ + %08x])\n", dst, offset);
 		}
 
 		if (opt.log_use_mem) {
-			LP_(i, n) vbroadcastss(t2[i], ptr[dataReg_ + offset + (logN - 1) * 4]);
+			Zmm c1(ftr.allocIdx());
+			vbroadcastss(c1, ptr[dataReg_ + offset + (logN - 1) * 4]);
+			LP_(i, n) vmovaps(t2[i], c1);
 			for (int j = logN - 2; j >= 0; j--) {
-				LP_(i, n) vfmadd213ps(t2[i], t0[i], ptr_b[dataReg_ + offset + j * 4]);
+				vbroadcastss(c1, ptr[dataReg_ + offset + j * 4]);
+				LP_(i, n) vfmadd213ps(t2[i], t0[i], c1);
 			}
 		} else {
 			LP_(i, n) vmovaps(t2[i], tbl[logN - 1]);
