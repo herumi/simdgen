@@ -76,7 +76,11 @@ struct IndexRangeManager {
 };
 
 struct SimdArray {
+#ifdef SG_NEON
+	static const int N = 4;
+#else
 	static const int N = 16;
+#endif
 	static const int byteSize = N * int(sizeof(uint32_t));
 private:
 	uint32_t d[N];
@@ -125,6 +129,7 @@ struct GeneratorBase {
 	Index<uint32_t> constMem_; // 4 byte float memory
 	Index<uint32_t> constIdx_; // preload regs
 	int simdByte_;
+	int maxSimdRegN_;
 	int unrollN_;
 	void* addr_;
 	/*
@@ -145,6 +150,7 @@ struct GeneratorBase {
 	SgOpt opt;
 	GeneratorBase()
 		: simdByte_(32 / 8) // one float
+		, maxSimdRegN_(1)
 		, unrollN_(0)
 		, addr_(0)
 		, varN_(0)
@@ -256,7 +262,7 @@ struct GeneratorBase {
 		maxTmpN_ = tl.getMaxTmpNum() * unrollN_;
 		totalN_ = varN_ + constN_ + funcTmpReg_.getSize() + maxTmpN_;
 		if (debug) printf("varN=%d constN=%d funcTmpReg.max=%d maxTmpN=%d\n", varN_, constN_, funcTmpReg_.getSize(), maxTmpN_);
-		return totalN_ <= 32;
+		return totalN_ <= maxSimdRegN_;
 	}
 	void detectUnrollN(const sg::TokenList& tl)
 	{

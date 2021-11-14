@@ -32,6 +32,11 @@
 		#define SG_X64
 	#else
 		#define SG_AARCH64
+		#ifdef __APPLE__
+			#define SG_NEON
+		#else
+			#define SG_SVE
+		#endif
 	#endif
 #endif
 

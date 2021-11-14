@@ -44,7 +44,13 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		, loop_i_(x5)
 		, debug(false)
 	{
+#ifdef SG_NEON
+		simdByte_ = 128 / 8;
+		maxSimdRegN_ = 32;
+#else
 		simdByte_ = 512 / 8;
+		maxSimdRegN_ = 32;
+#endif
 	}
 	// x[0] = sum(s[0:...15])
 	void reduceOne_sum(int d, int s)
@@ -89,7 +95,9 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		if (opt.break_point) brk(0);
 
 		adr(dataReg_, dataL);
+#ifdef SG_SVE
 		ptrue(p0.s);
+#endif
 		// store regs
 		if (debug) printf("saveRegBegin=%d saveRegEnd=%d totalN_=%d\n", saveRegBegin, saveRegEnd, totalN_);
 		const int saveN = std::min(saveRegEnd, totalN_);

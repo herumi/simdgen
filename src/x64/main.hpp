@@ -32,6 +32,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		, dataReg_(rax)
 	{
 		simdByte_ = 512 / 8;
+		maxSimdRegN_ = 32;
 	}
 	~Generator()
 	{
