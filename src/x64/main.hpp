@@ -26,10 +26,14 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	static const size_t totalSize = dataSize + codeSize;
 	Label dataL_;
 	Reg64 dataReg_;
+	Reg32 tmp32_;
+	Reg64 tmp64_;
 
 	Generator()
 		: CodeGenerator(totalSize, DontSetProtectRWE)
 		, dataReg_(rdx)
+		, tmp32_(eax)
+		, tmp64_(rax)
 	{
 		simdByte_ = 512 / 8;
 		maxSimdRegN_ = 32;
@@ -149,10 +153,10 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			test(ecx, ecx);
 			jz(exitL, T_NEAR);
 
-			mov(eax, 1);
-			shl(eax, cl);
-			sub(eax, 1);
-			kmovd(k1, eax);
+			mov(tmp32_, 1);
+			shl(tmp32_, cl);
+			sub(tmp32_, 1);
+			kmovd(k1, tmp32_);
 			vmovups(Zmm(getVarIdx(0))|k1|T_z, ptr[src]);
 			execOneLoop(tl, 1);
 			outputOne(dst, 0, k1);
@@ -194,13 +198,19 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	}
 	void gen_setInt(int dst, uint32_t u)
 	{
-//		mov(eax, u);
-//		vpbroadcastd(Zmm(dst), eax);
 		vbroadcastss(Zmm(dst), ptr[dataReg_ + getConstOffsetToDataReg(u)]);
+	}
+	void setInt(const Zmm& z, uint32_t u)
+	{
+		mov(tmp32_, u);
+		vpbroadcastd(z, tmp32_);
+	}
+	void setFloat(const Zmm& z, float f)
+	{
+		setInt(z, f2u(f));
 	}
 	void gen_fullLoad(int dst, uint32_t offset)
 	{
-printf("vmovups(zm%d, ptr[dataReg_ + %08x])\n", dst, offset);
 		vmovups(Zmm(dst), ptr[dataReg_ + offset]);
 	}
 	void gen_copy(int dst, int src)
@@ -282,7 +292,6 @@ printf("vmovups(zm%d, ptr[dataReg_ + %08x])\n", dst, offset);
 	void gen_log(int inout, int n)
 	{
 		const Zmm one(getFloatIdx(1.0f));
-		const Zmm log2(getFloatIdx(g_logTbl.log2));
 		int logN = g_logTbl.N;
 		ZmmVec tbl;
 		int offset = 0;
@@ -308,24 +317,24 @@ printf("vmovups(zm%d, ptr[dataReg_ + %08x])\n", dst, offset);
 		if (opt.log_use_mem) {
 			Zmm c1(ftr.allocIdx());
 			Zmm c2(ftr.allocIdx());
-			mov(eax, 127 << 23);
-			vpbroadcastd(c2, eax);
-			const Zmm f2div3(getFloatIdx(g_logTbl.f2div3));
+			setInt(c2, 127 << 23);
 			LP_(i, n) vpsubd(t1[i], t0[i], c2);
 			LP_(i, n) vpsrad(t1[i], t1[i], 23); // e
 			LP_(i, n) vcvtdq2ps(t1[i], t1[i]); // float(e)
-			mov(eax, 0x7fffff);
-			vpbroadcastd(c1, eax);
+			setInt(c1, 0x7fffff);
 			LP_(i, n) vpandd(t0[i], t0[i], c1);
 			LP_(i, n) vpord(t0[i], t0[i], c2); // y
-			LP_(i, n) vfmsub213ps(t0[i], f2div3, one); // a
-			vbroadcastss(c1, ptr[dataReg_ + getConstOffsetToDataReg(f2u(log(1.5)))]);
-			LP_(i, n) vfmadd213ps(t1[i], log2, c1); // e
+			setFloat(c1, 2.0f / 3);
+			LP_(i, n) vfmsub213ps(t0[i], c1, one); // a
+			setFloat(c1, log(1.5f));
+			setFloat(c2, log(2.0f));
+			LP_(i, n) vfmadd213ps(t1[i], c2, c1); // e
 		} else {
 			const Zmm log1p5(getFloatIdx(log(1.5)));
 			const Zmm i127shl23(getFloatIdx(u2f(g_logTbl.i127shl23)));
 			const Zmm x7fffff(getFloatIdx(u2f(g_logTbl.x7fffff)));
 			const Zmm f2div3(getFloatIdx(g_logTbl.f2div3));
+			const Zmm log2(getFloatIdx(g_logTbl.log2));
 			LP_(i, n) vpsubd(t1[i], t0[i], i127shl23);
 			LP_(i, n) vpsrad(t1[i], t1[i], 23); // e
 			LP_(i, n) vcvtdq2ps(t1[i], t1[i]); // float(e)

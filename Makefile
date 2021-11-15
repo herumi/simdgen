@@ -80,7 +80,7 @@ ifeq ($(DEBUG),1)
   endif
 else
   CFLAGS_OPT+=-fomit-frame-pointer -DNDEBUG -fno-stack-protector
-  CFLAGS_OPT+=-O3
+  CFLAGS_OPT+=-O3 # -ftree-vectorize -ffast-math
 endif
 CFLAGS_WARN=-Wall -Wextra -Wformat=2 -Wcast-qual -Wcast-align -Wwrite-strings -Wfloat-equal -Wpointer-arith -Wundef
 CFLAGS+=-g3
