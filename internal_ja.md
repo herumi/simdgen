@@ -19,18 +19,6 @@ src/const.hpp             ; 関数内で利用する定数
    x64/main.hpp           ; AVX-512用コード生成
    aarch64/main.hpp       ; SVE用コード生成
 ```
-
-行数(2021/7/30)
-wc -l
-```
-   96 const.hpp
-  305 gen.hpp
-  238 parser.hpp
-  252 tokenlist.hpp
-  260 x64/main.hpp
-  252 aarch64/main.hpp
-```
-
 ## tokenlist.hpp
 
 ### ValueType
@@ -49,10 +37,13 @@ wc -l
 
 ### FuncType
 関数の種類
-- Inv
-- Exp
-- Log
-- Tanh
+- Inv : inverse
+- Exp : exp
+- Log : log
+- Cosh : cosh
+- Tanh : tanh
+- DebugFunc : for debug
+- RedSum : sum
 
 ### Value
 `Value`クラスは値を持つ
@@ -159,25 +150,78 @@ L(exit);
 ```
 void gen_copy(int dst, int src)
 {
-    if (debug) printf("vmovaps z%d, z%d\n", dst, src);
     vmovaps(Zmm(dst), Zmm(src));
 }
 void gen_add(int dst, int src1, int src2)
 {
-    if (debug) printf("vaddps z%d, z%d, z%d\n", dst, src1, src2);
     vaddps(Zmm(dst), Zmm(src1), Zmm(src2));
 }
 void gen_sub(int dst, int src1, int src2)
 {
-    if (debug) printf("vsubps z%d, z%d, z%d\n", dst, src1, src2);
     vsubps(Zmm(dst), Zmm(src1), Zmm(src2));
 }
 void gen_mul(int dst, int src1, int src2)
 {
-    if (debug) printf("vmulps z%d, z%d, z%d\n", dst, src1, src2);
     vmulps(Zmm(dst), Zmm(src1), Zmm(src2));
 }
 ```
+
+### 関数生成コード(`gen_func(int inout, int n)`)の中でのレジスタの扱い
+
+inoutは入力データのSIMDレジスタ番号。
+inout, inout+1, ..., inout+n-1にデータが入っている。nはループアンロール回数。
+
+汎用レジスタ
+
+プログラム中で自由に使ってよい汎用レジスタはtmp32_(32bit)とtmp64_(64bit)のみ。
+
+SIMDレジスタ
+
+```
+const auto inp = getInputRegVec(inout, n);
+```
+これでinp[0], ..., inp[n-1]は入力SIMDレジスタとなる。
+関数を抜けるときはこれらのレジスタが戻り値となる。
+
+```
+IndexRangeManager ftr(funcTmpReg_);
+const ZmmVec t = getTmpRegVec(ftr, n);
+```
+
+これで関数内で一時的に利用できるSIMDレジスタがn個割り当てられる。
+t[0], ..., t[n-1]を利用できる。
+
+```
+Zmm t(ftr.allocIdx());
+```
+これで関数内で一時利用できるSIMDレジスタが1個割り当てられる。
+
+マスクレジスタ
+
+```
+IndexRangeManager ftm(funcTmpMask_);
+const auto mask = getTmpMaskVec(ftm, n);
+```
+これで関数内で一時利用できるマスクレジスタがn個割り当てられる。
+
+### 定数の扱い
+
+- `getFloatIdx(float x)`
+  - xの値をSIMDレジスタに設定し、そのレジスタ番号を返す。関数プロローグで一度だけ設定される。このレジスタの値を変更してはいけない。
+  - 複数回呼び出しても同じレジスタ番号を返す。
+- `getConstTblIdx(const void *p, size_t byteSize)`
+  - `p[0, byteSize)`のデータをSIMDレジスタに設定し、そのレジスタ番号を返す。関数プロローグで一度だけ設定される。このレジスタの値を変更してはいけない。
+  - 複数回呼び出しても同じレジスタ番号を返す。
+- `getConstOffsetToDataReg(uint32_t x)`
+  - xの値をメモリに設定し、dataReg_からのbyteオフセットを返す。SIMDレジスタには読まれない。必要に応じて自分で設定する。
+- `getConstTblOffsetToDataReg(const void *p, size_t byteSize)`
+  - `p[0, byteSize)`のデータをメモリに設定し、dataReg_からのbyteオフセットを返す。SIMDレジスタには読まれない。必要に応じて自分で設定する。
+
+- `setInt(const Zmm& z, uint32_t u)`
+  - zレジスタに値uをブロードキャスト設定する。
+- `setFloat(const Zmm& z, float f)`
+  - zレジスタに値fをブロードキャスト設定する。
+
 
 ### Exp
 

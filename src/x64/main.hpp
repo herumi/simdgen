@@ -200,11 +200,13 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	{
 		vbroadcastss(Zmm(dst), ptr[dataReg_ + getConstOffsetToDataReg(u)]);
 	}
+	// set int u to z using tmp32_ instead of memory
 	void setInt(const Zmm& z, uint32_t u)
 	{
 		mov(tmp32_, u);
 		vpbroadcastd(z, tmp32_);
 	}
+	// set float u to z using tmp32_ instead of memory
 	void setFloat(const Zmm& z, float f)
 	{
 		setInt(z, f2u(f));
@@ -291,7 +293,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	}
 	void gen_log(int inout, int n)
 	{
-		const Zmm one(getFloatIdx(1.0f));
 		int logN = g_logTbl.N;
 		ZmmVec tbl;
 		int offset = 0;
@@ -325,7 +326,8 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			LP_(i, n) vpandd(t0[i], t0[i], c1);
 			LP_(i, n) vpord(t0[i], t0[i], c2); // y
 			setFloat(c1, 2.0f / 3);
-			LP_(i, n) vfmsub213ps(t0[i], c1, one); // a
+			setFloat(c2, 1.0f);
+			LP_(i, n) vfmsub213ps(t0[i], c1, c2); // a
 			setFloat(c1, log(1.5f));
 			setFloat(c2, log(2.0f));
 			LP_(i, n) vfmadd213ps(t1[i], c2, c1); // e
@@ -335,6 +337,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			const Zmm x7fffff(getFloatIdx(u2f(g_logTbl.x7fffff)));
 			const Zmm f2div3(getFloatIdx(g_logTbl.f2div3));
 			const Zmm log2(getFloatIdx(g_logTbl.log2));
+			const Zmm one(getFloatIdx(1.0f));
 			LP_(i, n) vpsubd(t1[i], t0[i], i127shl23);
 			LP_(i, n) vpsrad(t1[i], t1[i], 23); // e
 			LP_(i, n) vcvtdq2ps(t1[i], t1[i]); // float(e)
@@ -348,6 +351,7 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			OpmaskVec mask = getTmpMaskVec(ftm, n);
 			const Zmm f1div8(getFloatIdx(g_logTbl.f1div8));
 			const Zmm x7fffffff(getFloatIdx(u2f(g_logTbl.x7fffffff)));
+			const Zmm one(getFloatIdx(1.0f));
 			LP_(i, n) vsubps(t2[i], keep[i], one);
 			LP_(i, n) vandps(t2[i], t2[i], x7fffffff);
 			LP_(i, n) vcmpltps(mask[i], t2[i], f1div8);

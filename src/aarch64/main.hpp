@@ -203,6 +203,15 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 #endif
 		cpy(ZRegS(dst), p0, tmpW_);
 	}
+	void setInt(const ZRegS& z, uint32_t u)
+	{
+		mov(tmpW_, u);
+		cpy(z, p0, tmpW_);
+	}
+	void setFloat(const ZRegS& z, float f)
+	{
+		setInt(z, f2u(f));
+	}
 	void gen_fullLoad(int dst, uint32_t offset)
 	{
 		ld1w(ZRegS(dst), p0, ptr(dataReg_, int(offset / SimdArray::byteSize)));
