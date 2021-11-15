@@ -31,16 +31,16 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	static const size_t totalSize = dataSize + codeSize;
 	Label dataL_;
 	XReg dataReg_;
-	XReg tmpX_;
-	WReg tmpW_;
+	XReg tmp64_;
+	WReg tmp32_;
 	XReg loop_i_;
 	bool debug;
 
 	Generator()
 		: CodeGenerator(totalSize)
 		, dataReg_(x3)
-		, tmpX_(x4)
-		, tmpW_(w4)
+		, tmp64_(x4)
+		, tmp32_(w4)
 		, loop_i_(x5)
 		, debug(false)
 	{
@@ -197,20 +197,24 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	void gen_setInt(int dst, uint32_t u)
 	{
 #if 1
-		ldr(tmpW_, ptr(dataReg_, getConstOffsetToDataReg(u)));
+		ldr(tmp32_, ptr(dataReg_, getConstOffsetToDataReg(u)));
 #else
-		mov(tmpW_, u);
+		mov(tmp32_, u);
 #endif
-		cpy(ZRegS(dst), p0, tmpW_);
+		cpy(ZRegS(dst), p0, tmp32_);
 	}
 	void setInt(const ZRegS& z, uint32_t u)
 	{
-		mov(tmpW_, u);
-		cpy(z, p0, tmpW_);
+		mov(tmp32_, u);
+		dup(z, tmp32_);
 	}
 	void setFloat(const ZRegS& z, float f)
 	{
-		setInt(z, f2u(f));
+		if (f2u(f) == f2u(1.0f)) {
+			fcpy(z, p0, f);
+		} else {
+			setInt(z, f2u(f));
+		}
 	}
 	void gen_fullLoad(int dst, uint32_t offset)
 	{
@@ -303,12 +307,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	}
 	void gen_log(int inout, int n)
 	{
-		const ZRegS i127shl23(getFloatIdx(u2f(g_logTbl.i127shl23)));
-		const ZRegS x7fffff(getFloatIdx(u2f(g_logTbl.x7fffff)));
-		const ZRegS log2(getFloatIdx(g_logTbl.log2));
-		const ZRegS f2div3(getFloatIdx(g_logTbl.f2div3));
-		const ZRegS log1p5(getFloatIdx(g_logTbl.log1p5));
-		const ZRegS one(getFloatIdx(1.0));
 		const int logN = LogTbl::N;
 		ZRegSVec tbl;
 		int offset = 0;
@@ -332,19 +330,46 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 			LP_(i, n) mov(keep[i], p0, t0[i]);
 		}
 
-		LP_(i, n) sub(t1[i], t0[i], i127shl23);
-		LP_(i, n) asr(t1[i], t1[i], 23);
-		// int -> float
-		LP_(i, n) scvtf(t1[i], p0, t1[i]);
-		LP_(i, n) and_(t0[i], p0, x7fffff);
-		LP_(i, n) orr(t0[i], p0, i127shl23);
-
-		// fnmsb(a, b, c) = a * b - c
-		LP_(i, n) fnmsb(t0[i], p0, f2div3, one);
-		LP_(i, n) fmad(t1[i], p0, log2, log1p5);
+		if (opt.log_use_mem) {
+			const ZRegS c1(ftr.allocIdx());
+			const ZRegS c2(ftr.allocIdx());
+			setInt(c2, 127 << 23);
+			LP_(i, n) sub(t1[i], t0[i], c2);
+			LP_(i, n) asr(t1[i], t1[i], 23);
+			setInt(c1, 0x7fffff);
+			// int -> float
+			LP_(i, n) scvtf(t1[i], p0, t1[i]);
+			LP_(i, n) and_(t0[i], p0, c1);
+			LP_(i, n) orr(t0[i], p0, c2);
+			setFloat(c1, 2.0f / 3);
+			setFloat(c2, 1.0f);
+			// fnmsb(a, b, c) = a * b - c
+			LP_(i, n) fnmsb(t0[i], p0, c1, c2);
+			setFloat(c1, log(1.5f));
+			setFloat(c2, log(2.0f));
+			LP_(i, n) fmad(t1[i], p0, c2, c1);
+		} else {
+			const ZRegS i127shl23(getFloatIdx(u2f(g_logTbl.i127shl23)));
+			const ZRegS x7fffff(getFloatIdx(u2f(g_logTbl.x7fffff)));
+			const ZRegS log2(getFloatIdx(g_logTbl.log2));
+			const ZRegS f2div3(getFloatIdx(g_logTbl.f2div3));
+			const ZRegS log1p5(getFloatIdx(g_logTbl.log1p5));
+			const ZRegS one(getFloatIdx(1.0));
+			LP_(i, n) sub(t1[i], t0[i], i127shl23);
+			LP_(i, n) asr(t1[i], t1[i], 23);
+			// int -> float
+			LP_(i, n) scvtf(t1[i], p0, t1[i]);
+			LP_(i, n) and_(t0[i], p0, x7fffff);
+			LP_(i, n) orr(t0[i], p0, i127shl23);
+			// fnmsb(a, b, c) = a * b - c
+			LP_(i, n) fnmsb(t0[i], p0, f2div3, one);
+			LP_(i, n) fmad(t1[i], p0, log2, log1p5);
+		}
 
 		if (opt.logp1) {
-			LP_(i, n) fsub(t2[i], keep[i], one); // x-1
+			const ZRegS c1(ftr.allocIdx());
+			setFloat(c1, 1.0f);
+			LP_(i, n) fsub(t2[i], keep[i], c1); // x-1
 			LP_(i, n) fcpy(keep[i], p0, 1.0/8);
 
 			const PRegSVec mask = getTmpMaskVec(ftm, n);
@@ -356,18 +381,18 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		if (opt.log_use_mem) {
 			const ZRegS u0(ftr.allocIdx());
 			const ZRegS u1(ftr.allocIdx());
-			ldr(tmpW_, ptr(dataReg_, offset + (logN - 1) * 4));
-			dup(u0, tmpW_);
-			ldr(tmpW_, ptr(dataReg_, offset + (logN - 2) * 4));
-			dup(u1, tmpW_);
+			ldr(tmp32_, ptr(dataReg_, offset + (logN - 1) * 4));
+			dup(u0, tmp32_);
+			ldr(tmp32_, ptr(dataReg_, offset + (logN - 2) * 4));
+			dup(u1, tmp32_);
 
 			LP_(i, n) {
 				movprfx(t2[i], p0, u0);
 				fmad(t2[i], p0, t0[i], u1);
 			}
 			for (int j = logN - 3; j >= 0; j--) {
-				ldr(tmpW_, ptr(dataReg_, offset + j * 4));
-				dup(u0, tmpW_);
+				ldr(tmp32_, ptr(dataReg_, offset + j * 4));
+				dup(u0, tmp32_);
 				LP_(i, n) fmad(t2[i], p0, t0[i], u0);
 			}
 		} else {
