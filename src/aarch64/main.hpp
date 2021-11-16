@@ -257,37 +257,72 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	}
 	void gen_exp(int inout, int n)
 	{
-		const ZRegS log2_e(getFloatIdx(g_expTbl.log2_e));
-		const ZRegD not_mask17(getFloatIdx(u2f(g_expTbl.not_mask17)));
-		const ZRegS one(getFloatIdx(1.0));
-		const ZRegS coeff1(getFloatIdx(g_expTbl.coeff1));
-		const ZRegS coeff2(getFloatIdx(g_expTbl.coeff2));
 		IndexRangeManager ftr(funcTmpReg_);
 		const ZRegSVec t0 = getInputRegVec(inout, n);
 		const ZRegSVec t1 = getTmpRegVec(ftr, n);
 		const ZRegSVec t2 = getTmpRegVec(ftr, n);
 
-//		fmin(t0, p0, expMax.s);
-//		fmax(t0, p0, expMin.s);
-		LP_(i, n) fmul(t0[i], t0[i], log2_e);
-		LP_(i, n) {
-			movprfx(t1[i], p0, t0[i]); // clear implicit dependency
-			frintm(t1[i], p0, t0[i]); // floor : float -> float
+		if (opt.use_mem) {
+			const ZRegS c1(ftr.allocIdx());
+			const ZRegS c2(ftr.allocIdx());
+
+	//		fmin(t0, p0, expMax.s);
+	//		fmax(t0, p0, expMin.s);
+			setFloat(c1, g_expTbl.log2_e);
+			LP_(i, n) fmul(t0[i], t0[i], c1);
+			LP_(i, n) {
+				movprfx(t1[i], p0, t0[i]); // clear implicit dependency
+				frintm(t1[i], p0, t0[i]); // floor : float -> float
+			}
+			LP_(i, n) fcvtzs(t2[i], p0, t1[i]); // n = float -> int
+			LP_(i, n) fsub(t1[i], t0[i], t1[i]); // a
+			setFloat(c1, 1.0f);
+			LP_(i, n) fadd(t0[i], t1[i], c1); // b = 1 + a
+			LP_(i, n) lsr(t1[i], t0[i], 17); // bL
+			LP_(i, n) fexpa(t1[i], t1[i]); // c = fexpa(bL)
+			LP_(i, n) fscale(t1[i], p0, t2[i]); // t[i+1] *= 2^n
+			setInt(c1, g_expTbl.not_mask17);
+			LP_(i, n) and_(ZRegD(t2[i].getIdx()), ZRegD(t0[i].getIdx()), ZRegD(c1.getIdx()));
+			LP_(i, n) fsub(t2[i], t0[i], t2[i]); // z
+
+			setFloat(c1, g_expTbl.coeff1);
+			setFloat(c2, g_expTbl.coeff2);
+			LP_(i, n) {
+				movprfx(t0[i], p0, c2);
+				fmad(t0[i], p0, t2[i], c1);
+			}
+			setFloat(c1, 1.0f);
+			LP_(i, n) fmad(t0[i], p0, t2[i], c1);
+			LP_(i, n) fmul(t0[i], t1[i], t0[i]);
+		} else {
+			const ZRegS log2_e(getFloatIdx(g_expTbl.log2_e));
+			const ZRegD not_mask17(getFloatIdx(u2f(g_expTbl.not_mask17)));
+			const ZRegS one(getFloatIdx(1.0));
+			const ZRegS coeff1(getFloatIdx(g_expTbl.coeff1));
+			const ZRegS coeff2(getFloatIdx(g_expTbl.coeff2));
+
+	//		fmin(t0, p0, expMax.s);
+	//		fmax(t0, p0, expMin.s);
+			LP_(i, n) fmul(t0[i], t0[i], log2_e);
+			LP_(i, n) {
+				movprfx(t1[i], p0, t0[i]); // clear implicit dependency
+				frintm(t1[i], p0, t0[i]); // floor : float -> float
+			}
+			LP_(i, n) fcvtzs(t2[i], p0, t1[i]); // n = float -> int
+			LP_(i, n) fsub(t1[i], t0[i], t1[i]); // a
+			LP_(i, n) fadd(t0[i], t1[i], one); // b = 1 + a
+			LP_(i, n) lsr(t1[i], t0[i], 17); // bL
+			LP_(i, n) fexpa(t1[i], t1[i]); // c = fexpa(bL)
+			LP_(i, n) fscale(t1[i], p0, t2[i]); // t[i+1] *= 2^n
+			LP_(i, n) and_(ZRegD(t2[i].getIdx()), ZRegD(t0[i].getIdx()), not_mask17);
+			LP_(i, n) fsub(t2[i], t0[i], t2[i]); // z
+			LP_(i, n) {
+				movprfx(t0[i], p0, coeff2);
+				fmad(t0[i], p0, t2[i], coeff1);
+			}
+			LP_(i, n) fmad(t0[i], p0, t2[i], one);
+			LP_(i, n) fmul(t0[i], t1[i], t0[i]);
 		}
-		LP_(i, n) fcvtzs(t2[i], p0, t1[i]); // n = float -> int
-		LP_(i, n) fsub(t1[i], t0[i], t1[i]); // a
-		LP_(i, n) fadd(t0[i], t1[i], one); // b = 1 + a
-		LP_(i, n) lsr(t1[i], t0[i], 17); // bL
-		LP_(i, n) fexpa(t1[i], t1[i]); // c = fexpa(bL)
-		LP_(i, n) fscale(t1[i], p0, t2[i]); // t[i+1] *= 2^n
-		LP_(i, n) and_(ZRegD(t2[i].getIdx()), ZRegD(t0[i].getIdx()), not_mask17);
-		LP_(i, n) fsub(t2[i], t0[i], t2[i]); // z
-		LP_(i, n) {
-			movprfx(t0[i], p0, coeff2);
-			fmad(t0[i], p0, t2[i], coeff1);
-		}
-		LP_(i, n) fmad(t0[i], p0, t2[i], one);
-		LP_(i, n) fmul(t0[i], t1[i], t0[i]);
 	}
 	void gen_cosh(int inout, int n)
 	{
