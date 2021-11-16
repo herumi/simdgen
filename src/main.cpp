@@ -37,7 +37,7 @@ static void setup(SgCode *sg, const char *varName, const char *src)
 	sg::Parser parser;
 	parser.parse(tl, src);
 	sg->gen.exec(tl);
-	sg->gen.opt.dump(sg->gen.addr_, sg->gen.getSize());
+	sg->gen.opt.dump(sg->gen.addr_, sg->gen.getSize() - ((const uint8_t*)sg->gen.addr_ - (const uint8_t*)sg->gen.getCode()));
 } catch (std::exception& e) {
 	fprintf(stderr, "SgGetFuncFloat1 %s\n", e.what());
 }
