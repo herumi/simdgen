@@ -196,12 +196,12 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	}
 	void gen_setInt(int dst, uint32_t u)
 	{
-#if 1
+#if 0
 		ldr(tmp32_, ptr(dataReg_, getConstOffsetToDataReg(u)));
-#else
-		mov(tmp32_, u);
-#endif
 		cpy(ZRegS(dst), p0, tmp32_);
+#else
+		ld1rw(ZRegS(dst), p0, ptr(dataReg_, (int)getConstOffsetToDataReg(u)));
+#endif
 	}
 	void setInt(const ZRegS& z, uint32_t u)
 	{
