@@ -247,31 +247,53 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	}
 	void gen_exp(int inout, int n)
 	{
-		const Zmm log2(getFloatIdx(g_expTbl.log2));
-		const Zmm log2_e(getFloatIdx(g_expTbl.log2_e));
-		const Zmm tbl[] = {
-			Zmm(getFloatIdx(g_expTbl.coef[0])),
-			Zmm(getFloatIdx(g_expTbl.coef[1])),
-			Zmm(getFloatIdx(g_expTbl.coef[2])),
-			Zmm(getFloatIdx(g_expTbl.coef[3])),
-			Zmm(getFloatIdx(g_expTbl.coef[4])),
-		};
 		IndexRangeManager ftr(funcTmpReg_);
 		const ZmmVec t0 = getInputRegVec(inout, n);
 		const ZmmVec t1 = getTmpRegVec(ftr, n);
 		const ZmmVec t2 = getTmpRegVec(ftr, n);
 
-		LP_(i, n) vmulps(t0[i], log2_e);
-		LP_(i, n) vrndscaleps(t1[i], t0[i], 0); // n = round(x)
-		LP_(i, n) vsubps(t0[i], t1[i]); // a
-		LP_(i, n) vmulps(t0[i], log2);
-		LP_(i, n) vmovaps(t2[i], tbl[4]);
-		LP_(i, n) vfmadd213ps(t2[i], t0[i], tbl[3]);
-		LP_(i, n) vfmadd213ps(t2[i], t0[i], tbl[2]);
-		LP_(i, n) vfmadd213ps(t2[i], t0[i], tbl[1]);
-		LP_(i, n) vfmadd213ps(t2[i], t0[i], tbl[0]);
-		LP_(i, n) vfmadd213ps(t2[i], t0[i], tbl[0]);
-		LP_(i, n) vscalefps(t0[i], t2[i], t1[i]); // t2 * 2^t1
+		if (opt.use_mem) {
+			Zmm c1(ftr.allocIdx());
+			setFloat(c1, g_expTbl.log2_e);
+			LP_(i, n) vmulps(t0[i], c1);
+			LP_(i, n) vrndscaleps(t1[i], t0[i], 0); // n = round(x)
+			LP_(i, n) vsubps(t0[i], t1[i]); // a
+			setFloat(c1, g_expTbl.log2);
+			LP_(i, n) vmulps(t0[i], c1);
+			setFloat(c1, g_expTbl.coef[4]);
+			LP_(i, n) vmovaps(t2[i], c1);
+			setFloat(c1, g_expTbl.coef[3]);
+			LP_(i, n) vfmadd213ps(t2[i], t0[i], c1);
+			setFloat(c1, g_expTbl.coef[2]);
+			LP_(i, n) vfmadd213ps(t2[i], t0[i], c1);
+			setFloat(c1, g_expTbl.coef[1]);
+			LP_(i, n) vfmadd213ps(t2[i], t0[i], c1);
+			setFloat(c1, g_expTbl.coef[0]);
+			LP_(i, n) vfmadd213ps(t2[i], t0[i], c1);
+			LP_(i, n) vfmadd213ps(t2[i], t0[i], c1);
+			LP_(i, n) vscalefps(t0[i], t2[i], t1[i]); // t2 * 2^t1
+		} else {
+			const Zmm log2(getFloatIdx(g_expTbl.log2));
+			const Zmm log2_e(getFloatIdx(g_expTbl.log2_e));
+			const Zmm tbl[] = {
+				Zmm(getFloatIdx(g_expTbl.coef[0])),
+				Zmm(getFloatIdx(g_expTbl.coef[1])),
+				Zmm(getFloatIdx(g_expTbl.coef[2])),
+				Zmm(getFloatIdx(g_expTbl.coef[3])),
+				Zmm(getFloatIdx(g_expTbl.coef[4])),
+			};
+			LP_(i, n) vmulps(t0[i], log2_e);
+			LP_(i, n) vrndscaleps(t1[i], t0[i], 0); // n = round(x)
+			LP_(i, n) vsubps(t0[i], t1[i]); // a
+			LP_(i, n) vmulps(t0[i], log2);
+			LP_(i, n) vmovaps(t2[i], tbl[4]);
+			LP_(i, n) vfmadd213ps(t2[i], t0[i], tbl[3]);
+			LP_(i, n) vfmadd213ps(t2[i], t0[i], tbl[2]);
+			LP_(i, n) vfmadd213ps(t2[i], t0[i], tbl[1]);
+			LP_(i, n) vfmadd213ps(t2[i], t0[i], tbl[0]);
+			LP_(i, n) vfmadd213ps(t2[i], t0[i], tbl[0]);
+			LP_(i, n) vscalefps(t0[i], t2[i], t1[i]); // t2 * 2^t1
+		}
 	}
 	void gen_cosh(int inout, int n)
 	{
