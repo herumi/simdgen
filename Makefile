@@ -113,7 +113,8 @@ ifeq ($(XBYAK),1)
 endif
 
 SG_LIB=$(LIB_DIR)/libsimdgen.a
-all: $(SG_LIB)
+SG_SLIB=$(EXE_DIR)/libsimdgen.$(LIB_SUF)
+all: $(SG_LIB) $(SG_SLIB)
 
 XBYAK_AARCH64_DIR?=src/aarch64/xbyak_aarch64
 ifeq ($(XBYAK_AARCH64),1)
@@ -127,6 +128,9 @@ endif
 
 $(SG_LIB): $(LIB_OBJ)
 	$(AR) $@ $(LIB_OBJ)
+
+$(SG_SLIB): $(LIB_OBJ)
+	$(PRE)$(CXX) -o $@ $(LIB_OBJ) -shared $(LDFLAGS)
 
 VPATH=test src sample
 
@@ -157,7 +161,7 @@ test_unroll: $(TEST_EXE)
 	env SG_OPT="unroll=3" bin/accuracy_test.exe >u3.txt
 
 clean:
-	$(RM) $(LIB_DIR)/*.a $(LIB_DIR)/*.$(LIB_SUF) $(OBJ_DIR)/*.o $(OBJ_DIR)/*.obj $(OBJ_DIR)/*.d $(EXE_DIR)/*.exe
+	$(RM) $(SG_LIB) $(SG_SLIB) $(OBJ_DIR)/*.o $(OBJ_DIR)/*.obj $(OBJ_DIR)/*.d $(EXE_DIR)/*.exe
 
 ALL_SRC=$(SRC_SRC) $(TEST_SRC) $(SAMPLE_SRC)
 DEPEND_FILE=$(addprefix $(OBJ_DIR)/, $(addsuffix .d,$(basename $(ALL_SRC))))
