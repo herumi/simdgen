@@ -93,55 +93,104 @@ src/const.hpp             ; 関数内で利用する定数
 コード生成本体
 
 ```
-    Label dataL = L();   // data領域
-    updateConstIdx(tl);  // TokenListで利用される定数を設定
-    for (size_t i = 0; i < constN_; i++) {
-        dd(constIdx_.getVal(i)); // data領域に展開
+Label dataL = L();   // data領域
+
+detectUnrollN(tl);   // unroll回数を決定
+
+setSize(0);
+for (uint32_t i = 0; i < constTblMem_.size(); i++) {
+    const SimdArray& v = constTblMem_.getVal(i);
+    for (size_t j = 0; j < v.N; j++) {
+        dd(v.get32bit(j));                            // 利用する定数をdata領域に展開
     }
-    setSize(dataSize);           // dataSize終わり
-    addr_ = getCurr<SgFuncFloat1*>(); // ここからコード開始
+}
+for (uint32_t i = 0; i < constMem_.size(); i++) {
+    dd(constMem_.getVal(i));                          // 64バイト単位のdata
+}
+if (getSize() > dataSize) {
+    throw cybozu::Exception("bad data size") << getSize();
+}
+setSize(dataSize);        // dataSize終わり
+addr_ = getCurr<void*>(); // ここからコード開始
+if (opt.break_point) int3();
+{
+    int keepN = 0;
+    if (totalN_ > maxFreeN) keepN = totalN_ - maxFreeN;
     // スタックフレーム構築
-    StackFrame sf(this, 3, 1 | UseRCX, keepN_ * simdByte_); // keepN * simdByteだけスタック確保
+    StackFrame sf(this, 3, 1 | UseRCX | UseRDX, keepN * simdByte_);
     // store regs
-    for (int i = 0; i < keepN_; i++) {
-        vmovups(ptr[rsp + i * simdByte_], Zmm(saveTbl[i])); // 退避すべきレジスタをスタックに退避
+    // 退避すべきレジスタをスタックに退避
+    for (int i = 0; i < keepN; i++) {
+        vmovups(ptr[rsp + i * simdByte_], Zmm(maxFreeN + i));
     }
-    // とりあえず関数の形はfunc(float *dst, const *src, size_t n)に限定
-    const Reg64& dst = sf.p[0];
-    const Reg64& src = sf.p[1];
-    const Reg64& n = sf.p[2];
+    Reg64 dst, src, n;
+    if (reduceFuncType_ >= 0) {
+        // float func(const float *src, size_t n);
+        src = sf.p[0];
+        n = sf.p[1];
+    } else {
+        // void func(float *dst, const float *src, size_t n);
+        dst = sf.p[0];
+        src = sf.p[1];
+        n = sf.p[2];
+    }
     dataReg_ = sf.t[0];
     mov(dataReg_, (size_t)dataL.getAddress());
-    gen_setConst();  // 必要な定数をレジスタに設定
-    test(n, n);
-    Label mod16, exit;
-    mov(ecx, n);
-    and_(n, ~15u);
-    jz(mod16, T_NEAR); // ループ変数nが16未満ならmod16へジャンプ
+    gen_setConst();
+    if (reduceFuncType_ >= 0) {
+        LP_(i, unrollN_) {
+            Zmm red(getReduceVarIdx() + i);
+            vxorps(red, red);
+        }
+    }
+
+    Label cmp1L, cmp2L, exitL;
+    jmp(cmp1L, T_NEAR);
     puts("execOneLoop lp");
-Label lp = L();                           // ループの先頭
-    vmovups(Zmm(getVarIdx(0)), ptr[src]); // srcからレジスタに読み込み
-    execOneLoop(tl);                      // ループ1回分(将来unroll予定)のコード生成
-    vmovups(ptr[dst], Zmm(getTmpIdx(0))); // 計算結果をdstに書き込み
-    add(src, 64);                         // ポインタ更新
-    add(dst, 64);
-    sub(n, 16);
-    jnz(lp, T_NEAR);                      // n > 16である限りループ
-L(mod16);
-    puts("execOneLoop mod16");            // 残り
-    and_(ecx, 15);                        // n &= 15
-    jz(exit, T_NEAR);
-    mov(eax, 1);
-    shl(eax, cl);
-    sub(eax, 1);
-    kmovd(k1, eax);                      // マスクレジスタk1に(1 << n) - 1を設定
-    vmovups(Zmm(getVarIdx(0))|k1|T_z, ptr[src]); // srcからn個読み込み
-    execOneLoop(tl);                        // 残りのコード生成
-    vmovups(ptr[dst]|k1, Zmm(getTmpIdx(0)));// 結果の書き込み
-L(exit);
+Label lp1 = L(); // while (n >= 16 * unrollN_)
+    LP_(i, unrollN_) vmovups(Zmm(getVarIdx(i)), ptr[src + i * simdByte_]);// srcからレジスタに読み込み
+    execOneLoop(tl, unrollN_);                                            // ループunrollN_回分のコード生成
+    LP_(i, unrollN_) outputOne(dst, i); // 計算結果をdstに書き込み
+    add(src, 64 * unrollN_);            // ポインタ更新
+    if (reduceFuncType_ < 0) add(dst, 64 * unrollN_);
+    sub(n, 16 * unrollN_);
+L(cmp1L);
+    cmp(n, 16  * unrollN_);
+    jge(lp1, T_NEAR);
+
+    // 残り
+    if (unrollN_ > 1) {
+        jmp(cmp2L, T_NEAR);
+    Label lp2 = L();
+        vmovups(Zmm(getVarIdx(0)), ptr[src]);
+        execOneLoop(tl, 1);
+        outputOne(dst, 0);
+        add(src, 64);
+        if (reduceFuncType_ < 0) add(dst, 64);
+        sub(n, 16);
+    L(cmp2L);
+        cmp(n, 16);
+        jge(lp2, T_NEAR);
+    }
+
+    mov(ecx, n);
+    test(ecx, ecx);
+    jz(exitL, T_NEAR);
+
+    mov(tmp32_, 1);
+    shl(tmp32_, cl);
+    sub(tmp32_, 1);
+    kmovd(k1, tmp32_); // マスクレジスタk1に(1 << n) - 1を設定
+    vmovups(Zmm(getVarIdx(0))|k1|T_z, ptr[src]);// srcからn個読み込み
+    execOneLoop(tl, 1);   // 残りのコード生成
+    outputOne(dst, 0, k1);// 結果の書き込み
+L(exitL);
+    if (reduceFuncType_ >= 0) {
+        reduceAll();
+    }
     // restore regs
-    for (int i = 0; i < keepN_; i++) {      // スタックからレジスタ復元
-        vmovups(Zmm(saveTbl[i]), ptr[rsp + i * simdByte_]);
+    for (int i = 0; i < keepN; i++) { // スタックからレジスタ復元
+        vmovups(Zmm(maxFreeN + i), ptr[rsp + i * simdByte_]);
     }
 ```
 
