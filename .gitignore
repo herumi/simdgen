@@ -4,3 +4,4 @@
 *.a
 result.txt
 CVS
+*.so
