@@ -261,48 +261,76 @@ void gen_exp(int inout)
 
 ### Generator
 ```
-    adr(dataReg_, dataL);
-    ptrue(p0.s);
-    // store regs
-    for (int i = 0; i < keepN_; i++) {
-        sub(sp, sp, 64);
-        st1w(ZReg(saveTbl[i]).s, p0, ptr(sp));
-    }
-    const XReg& dst = x0;
-    const XReg& src = x1;
-    const XReg& n = x2;
-    gen_setConst();
+        adr(dataReg_, dataL);
+        ptrue(p0.s);
+        if (debug) printf("saveRegBegin=%d saveRegEnd=%d totalN_=%d\n", saveRegBegin, saveRegEnd, totalN_);
+        const int saveN = std::min(saveRegEnd, totalN_);
+        for (int i = saveRegBegin; i < saveN; i++) {
+            sub(sp, sp, 64);
+            st1w(ZReg(i).s, p0, ptr(sp));
+        }
+        const int saveMaskN = funcTmpMask_.getMax();
+        for (int i = savePredBegin; i < saveMaskN; i++) {
+            sub(sp, sp, 16);
+            str(PReg(i).s, ptr(sp));
+        }
 
-    Label skip;
-    b(skip);
-Label lp = L();
-    ld1w(ZReg(getVarIdx(0)).s, p0, ptr(src));
-    add(src, src, 64);
-    execOneLoop(tl);
-    st1w(ZReg(getTmpIdx(0)).s, p0, ptr(dst));
-    add(dst, dst, 64);
-    sub(n, n, 16);
-L(skip);
-    cmp(n, 16);
-    bge(lp);
+        XReg dst = x0, src = x1, n = x2;
+        if (reduceFuncType_ >= 0) {
+            // dst is not used
+            src = x0;
+            n = x1;
+        }
+        gen_setConst();
+        if (reduceFuncType_ >= 0) {
+            LP_(i, unrollN_) {
+                ZRegS red(getReduceVarIdx() + i);
+                mov(red, 0);
+            }
+        }
 
-    Label cond;
-    mov(tmpX_, 0);
-    b(cond);
-Label lp2 = L();
-    ld1w(ZReg(getVarIdx(0)).s, p1, ptr(src, tmpX_, LSL, 2));
-    execOneLoop(tl);
-    st1w(ZReg(getTmpIdx(0)).s, p1, ptr(dst, tmpX_, LSL, 2));
-    incd(tmpX_);
-L(cond);
-    whilelt(p1.s, tmpX_, n);
-    b_first(lp2);
+        Label skipL, exitL;
+        b(skipL);
+    Label lp = L();
+        LP_(i, unrollN_) ldr(ZReg(getVarIdx(i)), ptr(src, i));
+        add(src, src, 64 * unrollN_);
+        execOneLoop(tl, unrollN_);
+        LP_(i, unrollN_) outputOne(dst, i);
+        if (reduceFuncType_ < 0) add(dst, dst, 64 * unrollN_);
+        sub(n, n, 16 * unrollN_);
+    L(skipL);
+        cmp(n, 16 * unrollN_);
+        bge(lp);
 
-    // restore regs
-    for (int i = 0; i < keepN_; i++) {
-        ld1w(ZReg(saveTbl[i]).s, p0, ptr(sp));
-        add(sp, sp, 64);
-    }
-    ret();
-    ready();
+        cmp(n, 0);
+        beq(exitL);
+
+        Label cond;
+        mov(loop_i_, 0);
+        b(cond);
+    Label lp2 = L();
+        ld1w(ZReg(getVarIdx(0)).s, p1, ptr(src, loop_i_, LSL, 2));
+        execOneLoop(tl, 1);
+        outputOne(dst, 0, &loop_i_);
+        incw(loop_i_);
+    L(cond);
+        whilelt(p1.s, loop_i_, n);
+        b_first(lp2);
+    L(exitL);
+
+        if (reduceFuncType_ >= 0) {
+            reduceAll();
+        }
+
+        // restore regs
+        for (int i = savePredBegin; i < saveMaskN; i++) {
+            ldr(PReg(saveMaskN + savePredBegin - 1 - i).s, ptr(sp));
+            add(sp, sp, 16);
+        }
+        for (int i = saveRegBegin; i < saveN; i++) {
+            ld1w(ZReg(saveN + saveRegBegin - 1 - i).s, p0, ptr(sp));
+            add(sp, sp, 64);
+        }
+        ret();
+        ready();
 ```
