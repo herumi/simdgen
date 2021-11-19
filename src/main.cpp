@@ -39,20 +39,14 @@ static void setup(SgCode *sg, const char *varName, const char *src)
 	sg->gen.exec(tl);
 	sg->gen.opt.dump(sg->gen.addr_, sg->gen.getSize() - ((const uint8_t*)sg->gen.addr_ - (const uint8_t*)sg->gen.getCode()));
 } catch (std::exception& e) {
-	fprintf(stderr, "SgGetFuncFloat1 %s\n", e.what());
+	fprintf(stderr, "SgGetFuncAddr %s\n", e.what());
 }
 
 
-SgFuncFloat1 SgGetFuncFloat1(SgCode *sg, const char *varName, const char *src)
+const void* SgGetFuncAddr(SgCode *sg, const char *varName, const char *src)
 {
 	if (sg == 0) return 0;
 	setup(sg, varName, src);
-	return sg->gen.getAddrFloat1();
+	return (const void*)sg->gen.getAddrFloat1();
 }
 
-SgFuncFloat1Reduce SgGetFuncFloat1Reduce(SgCode *sg, const char *varName, const char *src)
-{
-	if (sg == 0) return 0;
-	setup(sg, varName, src);
-	return sg->gen.getAddrFloat1Reduce();
-}

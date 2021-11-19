@@ -168,8 +168,7 @@ struct GeneratorBase {
 	virtual ~GeneratorBase()
 	{
 	}
-	SgFuncFloat1 getAddrFloat1() const { return (SgFuncFloat1)addr_; }
-	SgFuncFloat1Reduce getAddrFloat1Reduce() const { return (SgFuncFloat1Reduce)addr_; }
+	const void* getAddrFloat1() const { return addr_; }
 	int getVarIdxOffset() const { return 0; }
 	int getVarIdx(int i) const { return getVarIdxOffset() + i; }
 	int getReduceVarIdx() const { return getVarIdxOffset() + varN_ - unrollN_; }

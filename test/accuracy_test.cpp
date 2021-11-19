@@ -112,7 +112,7 @@ void checkTable(float (*f)(float), SgFuncFloat1 g, const float (&tbl)[N])
 CYBOZU_TEST_AUTO(loop)
 {
 	SgCode *sg = SgCreate();
-	SgFuncFloat1 addr = SgGetFuncFloat1(sg, "x", "x+100");
+	SgFuncFloat1 addr = (SgFuncFloat1)SgGetFuncAddr(sg, "x", "x+100");
 	if (addr == 0) {
 		CYBOZU_TEST_ASSERT(false);
 		return;
@@ -140,7 +140,7 @@ CYBOZU_TEST_AUTO(loop)
 CYBOZU_TEST_AUTO(exp)
 {
 	SgCode *sg = SgCreate();
-	SgFuncFloat1 addr = SgGetFuncFloat1(sg, "x", "exp(x)");
+	SgFuncFloat1 addr = (SgFuncFloat1)SgGetFuncAddr(sg, "x", "exp(x)");
 	if (addr == 0) {
 		CYBOZU_TEST_ASSERT(false);
 		return;
@@ -159,7 +159,7 @@ CYBOZU_TEST_AUTO(exp)
 CYBOZU_TEST_AUTO(log)
 {
 	SgCode *sg = SgCreate();
-	SgFuncFloat1 addr = SgGetFuncFloat1(sg, "x", "log(x)");
+	SgFuncFloat1 addr = (SgFuncFloat1)SgGetFuncAddr(sg, "x", "log(x)");
 	if (addr == 0) {
 		CYBOZU_TEST_ASSERT(false);
 		return;
@@ -181,7 +181,7 @@ float inv(float x) { return 1 / x; }
 CYBOZU_TEST_AUTO(inv)
 {
 	SgCode *sg = SgCreate();
-	SgFuncFloat1 addr = SgGetFuncFloat1(sg, "x", "inv(x)");
+	SgFuncFloat1 addr = (SgFuncFloat1)SgGetFuncAddr(sg, "x", "inv(x)");
 	if (addr == 0) {
 		CYBOZU_TEST_ASSERT(false);
 		return;
@@ -198,7 +198,7 @@ CYBOZU_TEST_AUTO(inv)
 CYBOZU_TEST_AUTO(cosh)
 {
 	SgCode *sg = SgCreate();
-	SgFuncFloat1 addr = SgGetFuncFloat1(sg, "x", "cosh(x)");
+	SgFuncFloat1 addr = (SgFuncFloat1)SgGetFuncAddr(sg, "x", "cosh(x)");
 	if (addr == 0) {
 		CYBOZU_TEST_ASSERT(false);
 		return;
@@ -214,7 +214,7 @@ CYBOZU_TEST_AUTO(cosh)
 CYBOZU_TEST_AUTO(red_sum)
 {
 	SgCode *sg = SgCreate();
-	SgFuncFloat1Reduce addr = SgGetFuncFloat1Reduce(sg, "x", "red_sum(x)");
+	SgFuncFloat1Reduce addr = (SgFuncFloat1Reduce)SgGetFuncAddr(sg, "x", "red_sum(x)");
 	if (addr == 0) {
 		CYBOZU_TEST_ASSERT(false);
 		return;

@@ -39,7 +39,7 @@ int main(int arg, char *argv[])
 {
 	const char *src = argc == 1 ? "x+3" : argv[1];
 	SgCode *sg = SgCreate();
-	SgFuncFloat1 addr = SgGetFuncFloat1(sg, "x", src);
+	SgFuncFloat1 addr = (SgFuncFloat1)SgGetFuncAddr(sg, "x", src);
 	const size_t N = 40;
 	float x[N], y[N];
 	for (size_t i = 0; i < N; i++) {
@@ -79,12 +79,12 @@ gcc t.c -I ./src -L ./lib -lsimdgen
 ### `void SgDestroy(SgCreate *sg)`
 - destroy an instance of `sg`.
 
-### `SgFuncFloat1 SgGetFuncFloat1(Sgcode *sg, const char *varName, const char *src)`
+### `SgFuncFloat1 SgGetFuncAddr(Sgcode *sg, const char *varName, const char *src)`
 - `sg` generates a code accoring to `varName` and src`.
 - `varName` is a variable name such as `x`.
 - `src` is a single function of `varName` such as `log(exp(x)+1)`.
 
-### `SgFuncFloat1Reduce SgGetFuncFloat1Reduce(Sgcode *sg, const char *varName, const char *src)`
+### `SgFuncFloat1Reduce SgGetFuncAddr(Sgcode *sg, const char *varName, const char *src)`
 - `sg` generates a code accoring to `varName` and src`.
 - `varName` is a variable name such as `x`.
 - `src` is a single function of `varName` such as `red_sum(log(cosh(x)))`.
@@ -98,7 +98,7 @@ gcc t.c -I ./src -L ./lib -lsimdgen
 - cosh(x)
 - red_sum(x) ; sum all values and return the value
   - This function can be set on the last function.
-  - Use `SgGetFuncFloat1Reduce` instead of `SgGetFuncFloat1`.
+  - Use `SgGetFuncAddr` instead of `SgGetFuncAddr`.
 
 ## Optional envrionment variables
 

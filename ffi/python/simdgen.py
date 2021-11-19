@@ -37,8 +37,8 @@ class SgCode(Structure):
 	def getFuncFloat1(self, varName, src):
 		if self.addr:
 			raise RuntimeError("already getFunc")
-		g_lib.SgGetFuncFloat1.restype = CFUNCTYPE(c_void_p, POINTER(c_float), POINTER(c_float), c_size_t)
-		self.addr = g_lib.SgGetFuncFloat1(self.p, c_char_p(varName.encode()), c_char_p(src.encode()))
+		g_lib.SgGetFuncAddr.restype = CFUNCTYPE(c_void_p, POINTER(c_float), POINTER(c_float), c_size_t)
+		self.addr = g_lib.SgGetFuncAddr(self.p, c_char_p(varName.encode()), c_char_p(src.encode()))
 		if not self.addr:
 			raise RuntimeError("bad param", varName, src)
 		return self.addr

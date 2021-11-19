@@ -59,8 +59,7 @@ SG_DLL_API void SgDestroy(SgCode *sg);
 /*
 	create JIT function
 */
-SG_DLL_API SgFuncFloat1 SgGetFuncFloat1(SgCode *sg, const char *varName, const char *src);
-SG_DLL_API SgFuncFloat1Reduce SgGetFuncFloat1Reduce(SgCode *sg, const char *varName, const char *src);
+SG_DLL_API const void* SgGetFuncAddr(SgCode *sg, const char *varName, const char *src);
 
 #ifdef __cplusplus
 }
