@@ -1,6 +1,7 @@
 import os
 import sys
 import platform
+import numpy
 from ctypes import *
 #from ctypes.util import find_library
 
@@ -21,6 +22,11 @@ def init():
 
 def is_c_float(a):
 	return isinstance(a, Array) and isinstance(a[0], float)
+
+def convert_ndarray_to_ctypes(a):
+	if not isinstance(a[0], numpy.float32):
+		raise RuntimeError("bad numpy type")
+	return a.ctypes.data_as(POINTER(c_float * len(a))).contents
 
 class SgCode(Structure):
 	def __init__(self, src, varName="x"):
@@ -44,6 +50,8 @@ class SgCode(Structure):
 	def calc(self, p1, p2=None):
 		if self.reduce:
 			# float func(const float *src, size_t n)
+			if isinstance(p1, numpy.ndarray):
+				p1 = convert_ndarray_to_ctypes(p1)
 			if not is_c_float(p1) or p2:
 				raise RuntimeError("bad type", type(p1), type(p2))
 			return self.addr(cast(byref(p1), POINTER(c_float)), len(p1))
@@ -51,6 +59,10 @@ class SgCode(Structure):
 			# void func(float *dst, const float *src, size_t n)
 			if len(p1) != len(p2):
 				raise RuntimeError("bad length", len(p1), len(p2))
+			if isinstance(p1, numpy.ndarray):
+				p1 = convert_ndarray_to_ctypes(p1)
+			if isinstance(p2, numpy.ndarray):
+				p2 = convert_ndarray_to_ctypes(p2)
 			if not is_c_float(p1) or not is_c_float(p2):
 				raise RuntimeError("bad type", type(p1), type(p2))
 			self.addr(cast(byref(p1), POINTER(c_float)), cast(byref(p2), POINTER(c_float)), len(p1))
