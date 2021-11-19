@@ -1,3 +1,4 @@
 
 test:
-	cd ../../bin && env LD_LIBRARY_PATH=./ python3 ../ffi/python/simdgen.py
+	env LD_LIBRARY_PATH=../../bin python3 simdgen.py
+	env LD_LIBRARY_PATH=../../bin python3 simdgen.py "red_sum(log(cosh(x)))"
