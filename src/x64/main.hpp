@@ -24,7 +24,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	static const size_t dataSize = 4096;
 	static const size_t codeSize = 8192;
 	static const size_t totalSize = dataSize + codeSize;
-	Label dataL_;
 	Reg64 dataReg_;
 	Reg32 tmp32_;
 	Reg64 tmp64_;

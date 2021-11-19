@@ -29,12 +29,10 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	static const size_t dataSize = 4096;
 	static const size_t codeSize = 8192;
 	static const size_t totalSize = dataSize + codeSize;
-	Label dataL_;
 	XReg dataReg_;
 	XReg tmp64_;
 	WReg tmp32_;
 	XReg loop_i_;
-	bool debug;
 
 	Generator()
 		: CodeGenerator(totalSize)
@@ -42,7 +40,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		, tmp64_(x4)
 		, tmp32_(w4)
 		, loop_i_(x5)
-		, debug(false)
 	{
 #ifdef SG_NEON
 		simdByte_ = 128 / 8;
@@ -74,7 +71,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	}
 	void exec(const sg::TokenList& tl)
 	{
-		if (debug) puts("aarch64/exec");
 		Label dataL = L();
 		detectUnrollN(tl);
 		setSize(0);

@@ -76,7 +76,6 @@ class SgCode(Structure):
 			return 0
 
 if __name__ == '__main__':
-	print("len=", len(sys.argv))
 	if len(sys.argv) > 1:
 		funcStr = sys.argv[1]
 	else:
