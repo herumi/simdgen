@@ -20,7 +20,6 @@ SgCode* SgCreate()
 {
 	return new SgCode();
 } catch (std::exception& e) {
-	fprintf(stderr, "err %s\n", e.what());
 	return 0;
 }
 
@@ -29,24 +28,21 @@ void SgDestroy(SgCode *sg)
 	delete sg;
 }
 
-static void setup(SgCode *sg, const char *varName, const char *src)
+const void* SgGetFuncAddr(SgCode *sg, const char *src, const char *varName)
 	try
 {
+	if (sg == 0) return 0;
 	sg::TokenList tl;
 	tl.setVar(varName);
 	sg::Parser parser;
 	parser.parse(tl, src);
 	sg->gen.exec(tl);
 	sg->gen.opt.dump(sg->gen.addr_, sg->gen.getSize() - ((const uint8_t*)sg->gen.addr_ - (const uint8_t*)sg->gen.getCode()));
+	return sg->gen.getAddrFloat1();
 } catch (std::exception& e) {
-	fprintf(stderr, "SgGetFuncAddr %s\n", e.what());
-}
-
-
-const void* SgGetFuncAddr(SgCode *sg, const char *varName, const char *src)
-{
-	if (sg == 0) return 0;
-	setup(sg, varName, src);
-	return (const void*)sg->gen.getAddrFloat1();
+	if (sg->gen.opt.debug) {
+		fprintf(stderr, "SgGetFuncAddr %s\n", e.what());
+	}
+	return 0;
 }
 

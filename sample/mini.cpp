@@ -45,7 +45,7 @@ int nored()
 		return 1;
 	}
 	const char *src = "log(exp(x) + 3)";
-	SgFuncFloat1 addr = (SgFuncFloat1)SgGetFuncAddr(sg, "x", src);
+	SgFuncFloat1 addr = (SgFuncFloat1)SgGetFuncAddr(sg, src, "x");
 	if (addr == 0) {
 		return 1;
 	}
@@ -85,7 +85,7 @@ int red_sum()
 		return 1;
 	}
 	const char *src = "red_sum(log(cosh(x)))";
-	SgFuncFloat1Reduce addr = (SgFuncFloat1Reduce)SgGetFuncAddr(sg, "x", src);
+	SgFuncFloat1Reduce addr = (SgFuncFloat1Reduce)SgGetFuncAddr(sg, src, "x");
 	if (addr == 0) {
 		return 1;
 	}
