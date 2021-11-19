@@ -5,3 +5,6 @@ test:
 
 test_numpy:
 	env LD_LIBRARY_PATH=../../bin python3 numpy-sample.py
+
+bench:
+	env LD_LIBRARY_PATH=../../bin python3 bench.py
