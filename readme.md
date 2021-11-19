@@ -79,15 +79,16 @@ gcc t.c -I ./src -L ./lib -lsimdgen
 ### `void SgDestroy(SgCreate *sg)`
 - destroy an instance of `sg`.
 
-### `SgFuncFloat1 SgGetFuncAddr(Sgcode *sg, const char *varName, const char *src)`
+### `const void* SgGetFuncAddr(Sgcode *sg, const char *varName, const char *src)`
 - `sg` generates a code accoring to `varName` and src`.
 - `varName` is a variable name such as `x`.
 - `src` is a single function of `varName` such as `log(exp(x)+1)`.
 
-### `SgFuncFloat1Reduce SgGetFuncAddr(Sgcode *sg, const char *varName, const char *src)`
-- `sg` generates a code accoring to `varName` and src`.
-- `varName` is a variable name such as `x`.
-- `src` is a single function of `varName` such as `red_sum(log(cosh(x)))`.
+Function Type
+- `typedef void (*SgFuncFloat1)(float *dst, const float *src, size_t n);`
+  - cast the address of a function such as `log(exp(x)+1)` to `SgFuncFloat1`.
+- `typedef float (*SgFuncFloat1Reduce)(const float *src, size_t n);`
+  - cast the address of a function such as `red_sum(x^2)` to `SgFuncFloat1Reduce`.
 
 ## Support functions
 
@@ -98,7 +99,6 @@ gcc t.c -I ./src -L ./lib -lsimdgen
 - cosh(x)
 - red_sum(x) ; sum all values and return the value
   - This function can be set on the last function.
-  - Use `SgGetFuncAddr` instead of `SgGetFuncAddr`.
 
 ## Optional envrionment variables
 
