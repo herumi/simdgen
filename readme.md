@@ -102,7 +102,7 @@ Function Type
 
 ## Optional envrionment variables
 
-`SG\_OPT` can controll this library.
+`SG_OPT` can controll this library.
 
 - `debug=1` ; display some debug information
 - `unroll=<num>` ; unroll the main loop (num=0, 2, 3...,). It will cause an error if all registers are used.
