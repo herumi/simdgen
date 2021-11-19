@@ -38,7 +38,8 @@ class SgCode(Structure):
 	def __init__(self, src, varName="x"):
 		if not g_lib:
 			init()
-		self.p = c_void_p(g_lib.SgCreate())
+		g_lib.SgCreate.restype = CFUNCTYPE(c_void_p)
+		self.p = g_lib.SgCreate()
 		if self.p == 0:
 			raise RuntimeError("SgCreate")
 		self.reduce = src.find("red_sum") >= 0
