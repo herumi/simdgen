@@ -122,7 +122,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 
 			Label cmp1L, cmp2L, exitL;
 			jmp(cmp1L, T_NEAR);
-			puts("execOneLoop lp");
 		Label lp1 = L(); // while (n >= 16 * unrollN_)
 			LP_(i, unrollN_) vmovups(Zmm(getVarIdx(i)), ptr[src + i * simdByte_]);
 			execOneLoop(tl, unrollN_);
@@ -133,7 +132,6 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		L(cmp1L);
 			cmp(n, 16  * unrollN_);
 			jge(lp1, T_NEAR);
-			puts("execOneLoop remain");
 
 			if (unrollN_ > 1) {
 				jmp(cmp2L, T_NEAR);

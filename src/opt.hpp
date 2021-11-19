@@ -16,8 +16,8 @@ struct SgOpt {
 		, debug(false)
 		, break_point(false)
 		, logp1(true)
-		, log_use_mem(false)
-		, use_mem(false)
+		, log_use_mem(true)
+		, use_mem(true)
 		, dumpName("")
 	{
 	}
