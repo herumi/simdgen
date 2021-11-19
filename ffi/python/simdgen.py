@@ -34,11 +34,11 @@ class SgCode(Structure):
 	def destroy(self):
 		g_lib.SgDestroy(self.p)
 		self.p = 0
-	def getFuncFloat1(self, varName, src):
+	def getFuncAddr(self, src, varName):
 		if self.addr:
 			raise RuntimeError("already getFunc")
 		g_lib.SgGetFuncAddr.restype = CFUNCTYPE(c_void_p, POINTER(c_float), POINTER(c_float), c_size_t)
-		self.addr = g_lib.SgGetFuncAddr(self.p, c_char_p(varName.encode()), c_char_p(src.encode()))
+		self.addr = g_lib.SgGetFuncAddr(self.p, c_char_p(src.encode()), c_char_p(varName.encode()))
 		if not self.addr:
 			raise RuntimeError("bad param", varName, src)
 		return self.addr
@@ -54,7 +54,7 @@ if __name__ == '__main__':
 	print(f"funcStr={funcStr}")
 	sg = SgCode()
 	sg.init()
-	sg.getFuncFloat1("x", funcStr)
+	sg.getFuncAddr(funcStr, "x")
 
 	dst = (c_float * 16)()
 	src = (c_float * 16)()
