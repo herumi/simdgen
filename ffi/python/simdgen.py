@@ -19,6 +19,9 @@ def init():
 		raise RuntimeError("not support yet", name)
 	g_lib = cdll.LoadLibrary(libName)
 
+def is_c_float(a):
+	return isinstance(a, Array) and isinstance(a[0], float)
+
 class SgCode(Structure):
 	def __init__(self, src, varName="x"):
 		if not g_lib:
@@ -40,10 +43,16 @@ class SgCode(Structure):
 		self.p = 0
 	def calc(self, p1, p2=None):
 		if self.reduce:
+			# float func(const float *src, size_t n)
+			if not is_c_float(p1) or p2:
+				raise RuntimeError("bad type", type(p1), type(p2))
 			return self.addr(cast(byref(p1), POINTER(c_float)), len(p1))
 		else:
+			# void func(float *dst, const float *src, size_t n)
 			if len(p1) != len(p2):
 				raise RuntimeError("bad length", len(p1), len(p2))
+			if not is_c_float(p1) or not is_c_float(p2):
+				raise RuntimeError("bad type", type(p1), type(p2))
 			self.addr(cast(byref(p1), POINTER(c_float)), cast(byref(p2), POINTER(c_float)), len(p1))
 			return 0
 
