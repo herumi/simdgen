@@ -98,7 +98,7 @@ CYBOZU_TEST_AUTO(calc)
 {
 	const char *src = STR(TEST_FUNC);
 	SgCode *sg = SgCreate();
-	SgFuncFloat1 addr = (SgFuncFloat1)SgGetFuncAddr(sg, src, "x");
+	SgFuncFloat1 addr = (SgFuncFloat1)SgGetFuncAddr(sg, src);
 	if (addr == 0) {
 		CYBOZU_TEST_ASSERT(false);
 		return;
@@ -131,7 +131,7 @@ CYBOZU_TEST_AUTO(sample)
 		src = g_src.c_str();
 	}
 	SgCode *sg = SgCreate();
-	SgFuncFloat1 addr = (SgFuncFloat1)SgGetFuncAddr(sg, src, "x");
+	SgFuncFloat1 addr = (SgFuncFloat1)SgGetFuncAddr(sg, src);
 	if (addr == 0) {
 		CYBOZU_TEST_ASSERT(false);
 		return;

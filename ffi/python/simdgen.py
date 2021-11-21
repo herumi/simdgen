@@ -35,7 +35,7 @@ def convert_ndarray_to_ctypes(a):
 	return a.ctypes.data_as(POINTER(c_float * len(a))).contents
 
 class SgCode(Structure):
-	def __init__(self, src, varName="x"):
+	def __init__(self, src):
 		if not g_lib:
 			init()
 		g_lib.SgCreate.restype = CFUNCTYPE(c_void_p)
@@ -47,9 +47,9 @@ class SgCode(Structure):
 			g_lib.SgGetFuncAddr.restype = CFUNCTYPE(c_float, POINTER(c_float), c_size_t)
 		else:
 			g_lib.SgGetFuncAddr.restype = CFUNCTYPE(c_void_p, POINTER(c_float), POINTER(c_float), c_size_t)
-		self.addr = g_lib.SgGetFuncAddr(self.p, c_char_p(src.encode()), c_char_p(varName.encode()))
+		self.addr = g_lib.SgGetFuncAddr(self.p, c_char_p(src.encode()))
 		if not self.addr:
-			raise RuntimeError("bad param", src, varName)
+			raise RuntimeError("bad param", src)
 	def destroy(self):
 		if g_lib:
 			g_lib.SgDestroy(self.p)

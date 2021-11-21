@@ -10,6 +10,7 @@ struct SgOpt {
 	bool logp1;
 	bool log_use_mem;
 	bool use_mem;
+	std::string varName;
 	std::string dumpName;
 	SgOpt()
 		: unrollN(0)
@@ -18,6 +19,7 @@ struct SgOpt {
 		, logp1(true)
 		, log_use_mem(true)
 		, use_mem(true)
+		, varName("x")
 		, dumpName("")
 	{
 	}
@@ -44,6 +46,10 @@ struct SgOpt {
 				unrollN = cybozu::atoi(v);
 				if (unrollN < 0) throw cybozu::Exception("bad unroll") << unrollN;
 				if (debug) printf("unrollN=%d\n", unrollN);
+			} else
+			if (k == "var") {
+				varName = v;
+				if (debug) printf("varName=%s\n", varName.c_str());
 			} else
 			if (k == "dump") {
 				dumpName = v;

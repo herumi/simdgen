@@ -28,12 +28,12 @@ void SgDestroy(SgCode *sg)
 	delete sg;
 }
 
-const void* SgGetFuncAddr(SgCode *sg, const char *src, const char *varName)
+const void* SgGetFuncAddr(SgCode *sg, const char *src)
 	try
 {
 	if (sg == 0) return 0;
 	sg::TokenList tl;
-	tl.setVar(varName);
+	tl.setVar(sg->gen.opt.varName);
 	sg::Parser parser;
 	parser.parse(tl, src);
 	sg->gen.exec(tl);

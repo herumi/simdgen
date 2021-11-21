@@ -39,7 +39,7 @@ int main(int arg, char *argv[])
 {
 	const char *src = argc == 1 ? "x+3" : argv[1];
 	SgCode *sg = SgCreate();
-	SgFuncFloat1 addr = (SgFuncFloat1)SgGetFuncAddr(sg, "x", src);
+	SgFuncFloat1 addr = (SgFuncFloat1)SgGetFuncAddr(sg, "x");
 	const size_t N = 40;
 	float x[N], y[N];
 	for (size_t i = 0; i < N; i++) {
@@ -79,10 +79,9 @@ gcc t.c -I ./src -L ./lib -lsimdgen
 ### `void SgDestroy(SgCreate *sg)`
 - destroy an instance of `sg`.
 
-### `const void* SgGetFuncAddr(Sgcode *sg, const char *varName, const char *src)`
-- `sg` generates a code accoring to `varName` and src`.
-- `varName` is a variable name such as `x`.
-- `src` is a single function of `varName` such as `log(exp(x)+1)`.
+### `const void* SgGetFuncAddr(Sgcode *sg, const char *src)`
+- `sg` generates a code to compute a function `src`.
+- `src` is a single function of `x` such as `log(exp(x)+1)`.
 
 Function Type
 - `typedef void (*SgFuncFloat1)(float *dst, const float *src, size_t n);`
@@ -93,11 +92,11 @@ Function Type
 ## Support functions
 
 - arithmetic operations (`+`, `-`, `\*`, `/`)
-- inv(x)
-- exp(x)
-- log(x)
-- cosh(x)
-- red_sum(x) ; sum all values and return the value
+- `inv(x)`
+- `exp(x)`
+- `log(x)`
+- `cosh(x)`
+- `red_sum(x) ; sum all values and return the value
   - This function can be set on the last function.
 
 ## Optional envrionment variables
@@ -111,6 +110,7 @@ Function Type
   - `objdump -M intel -CSlw -D -b binary -m i386 <file name>` shows a disassembled code.
   - Use `objdump -m aarch64 -D -b binary` for Aarch64.
 - `logp1=0` ; disable precise computation of log(x) for x is close to 1.
+- `var=<variable name>` ; the default value is `x`.
 
 ### Examples
 

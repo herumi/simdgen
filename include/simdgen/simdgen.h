@@ -60,9 +60,8 @@ SG_DLL_API void SgDestroy(SgCode *sg);
 	create JIT function and return the function address
 	return 0 if error
 	@param [in] src ; function string such as "log(x)+1/x"
-	@param [in] varName : variable name such as "x"
 */
-SG_DLL_API const void* SgGetFuncAddr(SgCode *sg, const char *src, const char *varName);
+SG_DLL_API const void* SgGetFuncAddr(SgCode *sg, const char *src);
 
 #ifdef __cplusplus
 }
