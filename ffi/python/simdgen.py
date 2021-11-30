@@ -30,9 +30,9 @@ def is_c_float(a):
 def convert_ndarray_to_ctypes(a):
 	if not g_numpy_exists:
 		return 0
-	if not isinstance(a[0], numpy.float32):
+	if not isinstance(a.flat[0], numpy.float32):
 		raise RuntimeError("bad numpy type")
-	return a.ctypes.data_as(POINTER(c_float * len(a))).contents
+	return a.ctypes.data_as(POINTER(c_float * len(a.flat))).contents
 
 class SgCode(Structure):
 	def __init__(self, src):
