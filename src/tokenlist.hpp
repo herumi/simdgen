@@ -36,6 +36,7 @@ enum OpType {
 };
 
 enum FuncType {
+	Neg,
 	Inv,
 	Exp,
 	Log,
@@ -50,6 +51,7 @@ enum FuncType {
 inline const char* getFuncName(size_t i)
 {
 	static const char *tbl[] = {
+		"neg",
 		"inv",
 		"exp",
 		"log",

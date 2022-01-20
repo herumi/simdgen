@@ -329,6 +329,10 @@ struct GeneratorBase {
 	{
 		if (debug) printf("div z%d, z%d, z%d\n", dst, src1, src2);
 	}
+	virtual void gen_neg(int inout, int n)
+	{
+		if (debug) printf("neg z%d (%d)\n", inout, n);
+	}
 	virtual void gen_inv(int inout, int n)
 	{
 		if (debug) printf("inv z%d (%d)\n", inout, n);
@@ -382,11 +386,13 @@ struct GeneratorBase {
 	{
 		const sg::ValueVec& vv = tl.getValueVec();
 		const size_t n = vv.size();
-		int stack[32];
+		const int maxStackPos = 32;
+		int stack[maxStackPos];
 		int stackPos = 0;
 		const int tmpMin = getTmpOffset();
 		int tmpPos = tmpMin;
 		for (size_t j = 0; j < n; j++) {
+			if (stackPos < 0 || maxStackPos <= stackPos) throw cybozu::Exception("bad stackPos") << stackPos;
 			const Value& v = vv[j];
 			switch (v.type) {
 			case Var:
@@ -438,6 +444,7 @@ struct GeneratorBase {
 						pos = stack[stackPos - unrollN];
 					}
 					switch (v.v) {
+					case Neg: gen_neg(pos, unrollN); break;
 					case Inv: gen_inv(pos, unrollN); break;
 					case Exp: gen_exp(pos, unrollN); break;
 					case Log: gen_log(pos, unrollN); break;

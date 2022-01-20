@@ -232,6 +232,14 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 	{
 		vdivps(Zmm(dst), Zmm(src1), Zmm(src2));
 	}
+	void gen_neg(int inout, int n)
+	{
+		IndexRangeManager ftr(funcTmpReg_);
+		const ZmmVec t = getInputRegVec(inout, n);
+		const Zmm sign(ftr.allocIdx());
+		setInt(sign, 1u << 31);
+		LP_(i, n) vxorps(t[i], sign);
+	}
 	void gen_inv(int inout, int n)
 	{
 		const Zmm two(getFloatIdx(2.0));
