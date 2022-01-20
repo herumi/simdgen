@@ -157,6 +157,11 @@ struct Parser {
 				return next;
 			}
 		}
+		if (*begin == '-') { // unary neg
+			const char *next = parseTerm(begin + 1, tl);
+			tl.appendFunc(Neg);
+			return next;
+		}
 		{
 			std::string str;
 			const char *next = parseVar(str, begin, end_);
