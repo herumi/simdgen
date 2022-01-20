@@ -237,6 +237,14 @@ struct Generator : CodeGenerator, sg::GeneratorBase {
 		movprfx(ZReg(dst), ZReg(src1));
 		fdiv(ZReg(dst).s, p0, ZReg(src2).s);
 	}
+	void gen_neg(int inout, int n)
+	{
+		IndexRangeManager ftr(funcTmpReg_);
+		const ZRegSVec t = getInputRegVec(inout, n);
+		const ZRegS sign(ftr.allocIdx());
+		setInt(sign, 1u << 31);
+		LP_(i, n) eor(t[i], p0, sign);
+	}
 	void gen_inv(int inout, int n)
 	{
 		IndexRangeManager ftr(funcTmpReg_);
